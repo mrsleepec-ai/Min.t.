@@ -87,6 +87,7 @@ function showList() {
   els.viewList.hidden = false;
   els.viewDetail.hidden = true;
   if (els.viewNote) els.viewNote.hidden = true;
+  if (els.viewNote) els.viewNote.hidden = true;
   els.appTitle.textContent = 'Minimal Tasks';
 
   const base = tasks.filter(t => filter === 'all' || (filter === 'active' ? !t.done : t.done));
@@ -164,6 +165,7 @@ function showDetail(id) {
 
   els.viewList.hidden = true;
   els.viewDetail.hidden = false;
+  if (els.viewNote) els.viewNote.hidden = true;
   if (els.viewNote) els.viewNote.hidden = true;
   els.appTitle.textContent = task.title;
   els.detailTitle.textContent = task.title;
