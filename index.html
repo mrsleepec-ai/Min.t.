@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <meta name="theme-color" content="#0ea5e9" />
+    <title>Minimal Tasks v21 v21 v20</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="favicon.png">
+    <style>
+      :root {
+        --bg: #0b1220;
+        --surface: #0f172a;
+        --muted: #93a4bf;
+        --text: #e6eefc;
+        --primary: #0ea5e9;
+        --ring: rgba(14,165,233,.4);
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f7fafc;
+          --surface: #ffffff;
+          --muted: #55627a;
+          --text: #0b1220;
+          --primary: #0ea5e9;
+          --ring: rgba(14,165,233,.25);
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, Inter, "Noto Sans", Ubuntu, Cantarell, "Helvetica Neue", Arial;
+        background: radial-gradient(1200px 600px at 10% -10%, rgba(14,165,233,.15), transparent 60%), var(--bg);
+        color: var(--text);
+        display: grid;
+        grid-template-rows: auto 1fr;
+      }
+      header {
+        position: sticky; top: 0; z-index: 10;
+        backdrop-filter: blur(8px);
+        background: color-mix(in oklab, var(--bg) 80%, transparent);
+        border-bottom: 1px solid color-mix(in oklab, var(--muted) 25%, transparent);
+        padding: 14px 16px;
+        display: flex; gap: 12px; align-items: center;
+      }
+      .brand { display: flex; gap: 10px; align-items: center; font-weight: 700; letter-spacing: .2px; }
+      .brand .logo { width: 28px; height: 28px; border-radius: 8px; background: conic-gradient(from 210deg, var(--primary), #a78bfa, #f472b6, var(--primary)); box-shadow: 0 2px 12px rgba(14,165,233,.35); }
+      .container { width: min(980px, 100%); margin: 0 auto; padding: 20px 16px 28px; }
+      .card {
+        background: var(--surface);
+        border: 1px solid color-mix(in oklab, var(--muted) 20%, transparent);
+        border-radius: 14px;
+        box-shadow: 0 8px 30px rgba(0,0,0,.15);
+        padding: 18px;
+      }
+      button { border: none; border-radius: 12px; padding: 10px 12px; background: var(--primary); color: white; font-weight: 600; cursor: pointer; }
+      button.ghost { background: transparent; color: var(--muted); border: 1px solid color-mix(in oklab, var(--muted) 30%, transparent); }
+      input[type="text"], input[type="date"], input[type="number"] {
+        width: 100%; padding: 10px 12px; border-radius: 12px;
+        border: 1px solid color-mix(in oklab, var(--muted) 25%, transparent);
+        background: color-mix(in oklab, var(--surface) 92%, #000 8%);
+        color: var(--text);
+        outline: none;
+      }
+      input[type="text"]:focus, input[type="date"]:focus, input[type="number"]:focus { border-color: var(--primary); box-shadow: 0 0 0 5px var(--ring); }
+      .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+      /* List view */
+      ul.tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+      .task { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; background: color-mix(in oklab, var(--surface) 95%, #000 5%); border: 1px solid color-mix(in oklab, var(--muted) 20%, transparent); border-radius: 12px; padding: 10px 12px; cursor: pointer; }
+      .task .title { font-weight: 550; word-break: break-word; }
+      .task.done .title { opacity: .6; text-decoration: line-through; }
+      .actions { display: flex; gap: 6px; }
+      .filters { display: flex; gap: 8px; margin: 10px 0 2px; flex-wrap: wrap; }
+      .filters button.active { background: color-mix(in oklab, var(--primary) 18%, transparent); color: var(--text); }
+      .empty { text-align: center; padding: 24px; color: var(--muted); border: 1px dashed color-mix(in oklab, var(--muted) 30%, transparent); border-radius: 12px; margin-top: 8px; }
+      /* Detail view */
+      .breadcrumbs { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+      .breadcrumbs a { color: var(--text); text-decoration: none; opacity: .8; }
+      ul.check { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+      .check li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; border: 1px solid color-mix(in oklab, var(--muted) 20%, transparent); border-radius: 12px; padding: 10px 12px; background: color-mix(in oklab, var(--surface) 95%, #000 5%); }
+      .check .title { word-break: break-word; }
+.check .title .text-clip { 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+  white-space: nowrap; 
+  display:block; 
+  min-width:0;
+}
+      .check .done .title { opacity: .6; text-decoration: line-through; }
+      .thumb { max-width: 72px; max-height: 72px; border-radius: 8px; border: 1px solid color-mix(in oklab, var(--muted) 25%, transparent); }
+      .thumb-wrap { display:flex; gap:8px; align-items:center; min-width:0; }
+      .lightbox {
+        position: fixed; inset: 0; background: rgba(0,0,0,.8);
+        display: none; align-items: center; justify-content: center; z-index: 50;
+      }
+      .lightbox img { max-width: 92vw; max-height: 92vh; border-radius: 12px; }
+      footer { opacity: .8; font-size: 12px; padding: 18px 16px 26px; text-align: center; color: var(--muted); }
+    
+      .wrap-16 { 
+        white-space: pre-wrap; 
+        word-break: break-word; 
+        line-height: 1.25; 
+      }
+      /* Ensure title container can shrink with image thumb */
+      .thumb-wrap { min-width: 0; }
+        </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <span id="appTitle">Minimal Tasks v21</span>
+      </div>
+      <button class="ghost" id="installButton" hidden>Установить</button>
+    </header>
+
+    <main class="container">
+      <!-- List View -->
+      <section class="card" id="view-list" hidden>
+        <h1 class="sr-only">Задачи</h1>
+
+        <form class="add" id="addForm" autocomplete="off" style="display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:14px;">
+          <input id="newTitle" type="text" placeholder="Что нужно сделать?" required maxlength="180" />
+          <button type="submit">Добавить</button>
+        </form>
+
+        <div class="filters" role="tablist" aria-label="Фильтр задач">
+          <button class="ghost active" data-filter="all" role="tab" aria-selected="true">Все</button>
+          <button class="ghost" data-filter="active" role="tab" aria-selected="false">Активные</button>
+          <button class="ghost" data-filter="done" role="tab" aria-selected="false">Готово</button>
+        </div>
+
+        <ul class="tasks" id="list" aria-live="polite"></ul>
+        <div class="empty" id="empty" hidden>Список пуст — добавьте первую задачу!</div>
+      </section>
+
+      <!-- Detail View -->
+      <section class="card" id="view-detail" hidden>
+        <nav class="breadcrumbs">
+          <a href="#/">← Список</a>
+          <span aria-hidden="true">/</span>
+          <strong id="detailTitle">Задача</strong>
+        </nav>
+
+        <form id="addCheckForm" autocomplete="off" style="display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:14px;">
+          <input id="newCheck" type="text" placeholder="Добавить пункт чек-листа…" maxlength="160" />
+          <button type="submit">Добавить</button>
+        </form>
+
+        <ul class="check" id="checkList" aria-live="polite"></ul>
+        <div class="empty" id="emptyCheck" hidden>Пока нет пунктов — добавьте первый!</div>
+      </section>
+    </main>
+
+    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true">
+      <img id="lightboxImg" alt="Фото подзадачи">
+    </div>
+
+    <footer>✨ Offline-PWA • Данные только у вас (LocalStorage)</footer>
+
+    <script type="module" src="app.js"></script>
+    <script>
+      // PWA install prompt
+      let deferredPrompt = null;
+      const installBtn = document.getElementById('installButton');
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBtn.hidden = false;
+      });
+      installBtn?.addEventListener('click', async () => {
+        installBtn.hidden = true;
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          await deferredPrompt.userChoice;
+          deferredPrompt = null;
+        }
+      });
+      // Register Service Worker
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js');
+        });
+      }
+    </script>
+  
+    <div id="updateBanner" style="position:fixed;left:50%;transform:translateX(-50%);bottom:18px;display:none;gap:8px;align-items:center;z-index:99;background:#0ea5e9;color:#fff;padding:10px 14px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.25);">
+      Доступно обновление
+      <button id="reloadApp" style="border:none;background:#fff;color:#0ea5e9;padding:6px 10px;border-radius:10px;font-weight:700;">Перезапустить</button>
+    </div>
+    
+  
+    <script>
+      (function(){
+        const banner = document.getElementById('updateBanner');
+        const reloadBtn = document.getElementById('reloadApp');
+        reloadBtn?.addEventListener('click', () => location.reload());
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.addEventListener('controllerchange', () => { banner.style.display='flex'; });
+          navigator.serviceWorker.getRegistration().then(reg => {
+            reg?.addEventListener('updatefound', () => {
+              const nw = reg.installing;
+              nw?.addEventListener('statechange', () => {
+                if (nw.state === 'installed' && navigator.serviceWorker.controller) banner.style.display='flex';
+              });
+            });
+          });
+        }
+      })();
+    </script>
+    
+  </body>
+</html>
