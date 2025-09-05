@@ -15,6 +15,8 @@ if (Array.isArray(tasks)) {
     if (!Array.isArray(t.items)) t.items = [];
     for (const it of t.items) {
       if (typeof it.photo !== 'string') it.photo = null; // dataURL or null
+      if (typeof it.photoKey !== 'string') it.photoKey = null;
+      if (typeof it.note !== 'string') it.note = '';
     }
   }
 } else {
@@ -36,6 +38,14 @@ const els = {
   addCheckForm: document.getElementById('addCheckForm'),
   newCheck: document.getElementById('newCheck'),
   checkList: document.getElementById('checkList'),
+  // note view
+  viewNote: document.getElementById('view-note'),
+  crumbTask: document.getElementById('crumbTask'),
+  noteTitle: document.getElementById('noteTitle'),
+  noteSubtaskText: document.getElementById('noteSubtaskText'),
+  noteText: document.getElementById('noteText'),
+  saveNoteBtn: document.getElementById('saveNoteBtn'),
+  clearNoteBtn: document.getElementById('clearNoteBtn'),
   emptyCheck: document.getElementById('emptyCheck'),
   // lightbox
   lightbox: document.getElementById('lightbox'),
@@ -63,6 +73,8 @@ function route() {
     currentId = null; showList();
   } else if (parts[0] === 'task' && parts[1]) {
     currentId = parts[1]; showDetail(parts[1]);
+  } else if (parts[0] === 'note' && parts[1] && parts[2]) {
+    showNote(parts[1], parts[2]);
   } else {
     location.hash = '#/';
   }
@@ -74,6 +86,7 @@ window.addEventListener('load', route);
 function showList() {
   els.viewList.hidden = false;
   els.viewDetail.hidden = true;
+  if (els.viewNote) els.viewNote.hidden = true;
   els.appTitle.textContent = 'Minimal Tasks';
 
   const base = tasks.filter(t => filter === 'all' || (filter === 'active' ? !t.done : t.done));
@@ -151,6 +164,7 @@ function showDetail(id) {
 
   els.viewList.hidden = true;
   els.viewDetail.hidden = false;
+  if (els.viewNote) els.viewNote.hidden = true;
   els.appTitle.textContent = task.title;
   els.detailTitle.textContent = task.title;
 
@@ -197,12 +211,19 @@ function renderChecklist(task) {
     if (it.photo) {
       const removePhotoBtn = ghost('🖼️✖︎', () => removePhoto(task.id, it.id));
       actions.append(removePhotoBtn, editBtn, delBtn);
+    actions.addEventListener('click', (e) => e.stopPropagation());
     } else {
       const attachBtn = ghost('📎', () => attachPhoto(task.id, it.id));
       actions.append(attachBtn, editBtn, delBtn);
+    actions.addEventListener('click', (e) => e.stopPropagation());
     }
 
     li.append(cb, title, actions);
+    // Overlay link on the entire row (reliable tap)
+    const rowLink = document.createElement('a');
+    rowLink.className = 'row-link';
+    rowLink.href = '#/note/' + task.id + '/' + it.id;
+    li.append(rowLink);
     els.checkList.append(li);
   }
 }
@@ -394,3 +415,30 @@ function escapeHtml(s) {
 
 // initial render
 route();
+
+/* ---------- NOTE VIEW ---------- */
+function showNote(taskId, itemId) {
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) { location.hash = '#/'; return; }
+  const it = (task.items || []).find(i => i.id === itemId);
+  if (!it) { location.hash = '#/task/' + taskId; return; }
+
+  els.viewList.hidden = true;
+  els.viewDetail.hidden = true;
+  els.viewNote.hidden = false;
+
+  els.appTitle.textContent = 'Примечание';
+  els.noteTitle.textContent = 'Примечание';
+  els.crumbTask.textContent = task.title;
+  els.crumbTask.href = '#/task/' + taskId;
+  els.noteSubtaskText.textContent = it.title;
+  els.noteText.value = it.note || '';
+
+  // Autosave (already injected earlier if present)
+  els.saveNoteBtn.onclick = () => {
+    it.note = els.noteText.value; save();
+    els.saveNoteBtn.textContent = 'Сохранено';
+    setTimeout(() => els.saveNoteBtn.textContent = 'Сохранить', 800);
+  };
+  els.clearNoteBtn.onclick = () => { els.noteText.value = ''; it.note = ''; save(); };
+}
