@@ -71,10 +71,6 @@
 #errorOverlay .box{max-width:800px;margin:40px auto;background:#0b1220;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px}
 #errorOverlay h3{margin:0 0 8px;font-size:18px}
 #errorOverlay pre{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.35}
-
-/* Groups (folders) for checklist */
-#checkList li.group-header{list-style:none;margin:8px 0 4px;padding:4px 0 0 0;font-weight:700;opacity:.9;border:none}
-#checkList li.group-empty{list-style:none;margin:0 0 8px;color:var(--muted);opacity:.8}
 </style>
 </head>
 <body>
@@ -104,7 +100,7 @@
       <div class="muted" id="taskHeader"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px;">
         <button id="pdfBtn" class="ghost">PDF</button>
-        <button id="renameTaskBtn" class="ghost">📁 Группы</button>
+        <button id="renameTaskBtn" class="ghost">✏️ Переименовать</button>
         <button id="deleteTaskBtn" class="ghost" style="border-color:#e11d48;color:#e11d48">🗑️ Удалить задачу</button>
       </div>
       <form id="addSub" class="add" autocomplete="off">
@@ -144,7 +140,7 @@
       <iframe id="pdfFrame" title="Просмотр PDF/печати"></iframe>
     </div>
     
-  <!-- Groups Manage Modal -->
+  <!-- Groups Manage Modal (lazy) -->
   <div id="groupManageModal" class="modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.5);z-index:230;">
     <div class="modal-box" style="background:var(--card);padding:20px;border-radius:12px;max-width:420px;width:92%;display:grid;gap:12px;">
       <div style="font-weight:700">Папки подзадач</div>
@@ -159,7 +155,7 @@
       </div>
     </div>
   </div>
-  <!-- Assign to Group Modal -->
+  <!-- Assign to Group Modal (lazy) -->
   <div id="groupAssignModal" class="modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.5);z-index:240;">
     <div class="modal-box" style="background:var(--card);padding:20px;border-radius:12px;max-width:360px;width:92%;display:grid;gap:12px;">
       <div style="font-weight:700">Назначить папку</div>
@@ -225,6 +221,6 @@
 
   <div id="orientationLock"><div class="box"><h2>Поверните устройство</h2><p>Приложение работает только в портретной ориентации.</p></div></div>
 <script src="app.v60.js"></script>
-<div id="diagBanner" style="position:fixed;left:8px;bottom:8px;background:#0b1220;color:#e6eefc;border:1px solid rgba(255,255,255,.15);padding:6px 10px;border-radius:10px;opacity:.9;z-index:9999;font-size:12px">Debug: groups-lite2-nosw</div>
+<div id="diagBanner" style="position:fixed;left:8px;bottom:8px;background:#0b1220;color:#e6eefc;border:1px solid rgba(255,255,255,.15);padding:6px 10px;border-radius:10px;opacity:.9;z-index:9999;font-size:12px">Debug: groups-lite3-nosw</div>
 </body>
 </html>

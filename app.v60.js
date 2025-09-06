@@ -147,50 +147,16 @@ function showDetail(taskId){
 
   renderChecklist(t);
 
-  els.addSub.onsubmit=(e)=>{ e.preventDefault(); const v=els.subTitle.value.trim(); if(!v) return; (t.items ||= []).push({id:uid(), title:v, done:false, note:'', notePhotoKeys:[], groupId:null}); t.done=false; save(); setTabLabels(); els.subTitle.value=''; renderChecklist(t); };
+  els.addSub.onsubmit=(e)=>{ e.preventDefault(); const v=els.subTitle.value.trim(); if(!v) return; (t.items ||= []).push({id:uid(), title:v, done:false, note:'', notePhotoKeys:[]}); t.done=false; save(); setTabLabels(); els.subTitle.value=''; renderChecklist(t); };
 }
-
 
 function renderChecklist(t){
-  var items = t.items || [];
+  const items = t.items || [];
   els.checkList.innerHTML=''; els.emptyCheck.hidden = items.length>0;
-  var groups = Array.isArray(t.groups) ? t.groups : [];
-  var byGroup = new Map();
-  items.forEach(function(it){
-    var key = it.groupId || 'ungrouped';
-    if(!byGroup.has(key)) byGroup.set(key, []);
-    byGroup.get(key).push(it);
-  });
-  function itemRow(it){
-    var li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
-    var cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!it.done;
-    cb.addEventListener('change', function(e){ e.preventDefault(); e.stopPropagation(); it.done=cb.checked; var allDone=(t.items||[]).length>0 && (t.items||[]).every(function(x){return x.done;}); t.done=allDone; save(); setTabLabels(); });
-    var title=document.createElement('div'); title.className='title'; title.textContent=it.title;
-    var actions=document.createElement('div'); actions.className='actions';
-    var folderBtn=ghost('📁', function(){ assignGroup(t.id, it.id); });
-    var attachBtn=ghost('📎', function(){ attachPhoto(t.id, it.id); });
-    var editBtn=ghost('✏️', function(){ editItem(t.id, it.id); });
-    var delBtn=ghost('🗑️', function(){ removeItem(t.id, it.id); });
-    actions.append(folderBtn, attachBtn, editBtn, delBtn);
-    actions.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); });
-    var link=document.createElement('a'); link.className='row-link'; link.href='#/note/'+t.id+'/'+it.id;
-    li.append(cb,title,actions,link);
-    return li;
-  }
-  groups.forEach(function(g){
-    var hdr=document.createElement('li'); hdr.className='group-header'; hdr.textContent=g.title; els.checkList.append(hdr);
-    var list = byGroup.get(g.id) || [];
-    if(!list.length){ var empty=document.createElement('li'); empty.className='group-empty'; empty.textContent='(пусто)'; els.checkList.append(empty); }
-    list.forEach(function(it){ els.checkList.append(itemRow(it)); });
-  });
-  var un = byGroup.get('ungrouped') || [];
-  if(un.length){
-    var hdr=document.createElement('li'); hdr.className='group-header'; hdr.style.opacity='.7'; hdr.textContent='Без папки'; els.checkList.append(hdr);
-    un.forEach(function(it){ els.checkList.append(itemRow(it)); });
-  }
-  if (window.MT_afterRenderChecklist) try{ window.MT_afterRenderChecklist(t); }catch(e){}
-}
-);
+  for(const it of items){
+    const li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!it.done;
+    cb.addEventListener('change', e=>{ e.preventDefault(); e.stopPropagation(); it.done=cb.checked; const allDone=(t.items||[]).length>0 && (t.items||[]).every(x=>x.done); t.done=allDone; save(); setTabLabels(); });
     const title=document.createElement('div'); title.className='title'; title.textContent=it.title;
     const actions=document.createElement('div'); actions.className='actions';
     const attachBtn=ghost('📎', ()=> attachPhoto(t.id, it.id));
@@ -531,55 +497,59 @@ function showChecklistParams(task){
 })();
 
 
-// ---- Groups lightweight implementation (no els injection) ----
-function _el(id){ return document.getElementById(id); }
-
-function openGroupManage(taskId){
-  var t = (window.tasks||[]).find(function(x){return x.id===taskId;}); if(!t) return;
-  if(!Array.isArray(t.groups)) t.groups = [];
-  var modal=_el('groupManageModal'), list=_el('groupsList'), add=_el('addGroupBtn'), name=_el('newGroupName'), close=_el('groupManageClose');
-  if(!modal||!list||!add||!name||!close){ alert('UI папок недоступен'); return; }
-  modal.style.display='flex';
-  function cleanup(){ modal.style.display='none'; add.onclick=null; close.onclick=null; document.removeEventListener('keydown',onKey); }
-  function onKey(e){ if(e.key==='Escape') cleanup(); }
-  document.addEventListener('keydown', onKey);
-  function renderList(){
-    list.innerHTML='';
-    if(!t.groups.length){ var p=document.createElement('div'); p.className='muted'; p.textContent='Папок пока нет'; list.appendChild(p); }
-    t.groups.forEach(function(g){
-      var row=document.createElement('div'); row.style.cssText='display:flex;gap:8px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:8px 10px;';
-      var nm=document.createElement('div'); nm.textContent=g.title; nm.style.fontWeight='600';
-      var del=document.createElement('button'); del.className='ghost'; del.textContent='🗑️';
-      del.onclick=function(){ var used=(t.items||[]).some(function(it){return it.groupId===g.id;}); if(used){ alert('Нельзя удалить: есть подзадачи в этой папке.'); return; } t.groups=t.groups.filter(function(x){return x.id!==g.id;}); save(); renderList(); renderChecklist(t); };
-      row.appendChild(nm); row.appendChild(del); list.appendChild(row);
-    });
+// ---- Groups support (append-only; original logic untouched) ----
+(function(){
+  function _el(id){ return document.getElementById(id); }
+  function ensureTask(t){ if(!t) return null; if(!Array.isArray(t.items)) t.items=[]; if(!Array.isArray(t.groups)) t.groups=[]; return t; }
+  window.openGroupManage = function(taskId){
+    try{
+      var t=(window.tasks||[]).find(function(x){return x.id===taskId;}); t=ensureTask(t); if(!t) return;
+      var modal=_el('groupManageModal'), list=_el('groupsList'), add=_el('addGroupBtn'), name=_el('newGroupName'), close=_el('groupManageClose');
+      if(!modal||!list||!add||!name||!close){ alert('UI папок недоступен'); return; }
+      modal.style.display='flex';
+      function cleanup(){ modal.style.display='none'; add.onclick=null; close.onclick=null; document.removeEventListener('keydown',onKey); }
+      function onKey(e){ if(e.key==='Escape') cleanup(); }
+      document.addEventListener('keydown', onKey);
+      function renderList(){
+        list.innerHTML='';
+        if(!t.groups.length){ var p=document.createElement('div'); p.className='muted'; p.textContent='Папок пока нет'; list.appendChild(p); }
+        t.groups.forEach(function(g){
+          var row=document.createElement('div'); row.style.cssText='display:flex;gap:8px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:8px 10px;';
+          var nm=document.createElement('div'); nm.textContent=g.title; nm.style.fontWeight='600';
+          var del=document.createElement('button'); del.className='ghost'; del.textContent='🗑️';
+          del.onclick=function(){ var used=(t.items||[]).some(function(it){return it.groupId===g.id;}); if(used){ alert('Нельзя удалить: есть подзадачи в этой папке.'); return; } t.groups=t.groups.filter(function(x){return x.id!==g.id;}); save(); renderList(); };
+          row.appendChild(nm); row.appendChild(del); list.appendChild(row);
+        });
+      }
+      renderList();
+      add.onclick=function(){ var v=(name.value||'').trim(); if(!v) return; t.groups.push({id:uid(), title:v}); name.value=''; save(); renderList(); };
+      close.onclick=function(){ cleanup(); };
+    }catch(e){ console.error(e); showErr(e); }
+  };
+  window.assignGroup = function(taskId,itemId){
+    try{
+      var t=(window.tasks||[]).find(function(x){return x.id===taskId;}); t=ensureTask(t); if(!t) return;
+      var it=(t.items||[]).find(function(i){return i.id===itemId;}); if(!it) return;
+      if(!Array.isArray(t.groups)||t.groups.length===0){ alert('Сначала создайте папку через меню задачи (кнопка Переименовать/Группы).'); return; }
+      var modal=_el('groupAssignModal'), list=_el('assignGroupList'), cancel=_el('assignCancel'), clear=_el('assignClear');
+      if(!modal||!list||!cancel||!clear){ alert('UI назначения папки недоступен'); return; }
+      modal.style.display='flex';
+      function cleanup(){ modal.style.display='none'; cancel.onclick=null; clear.onclick=null; document.removeEventListener('keydown',onKey); }
+      function onKey(e){ if(e.key==='Escape') cleanup(); }
+      document.addEventListener('keydown', onKey);
+      list.innerHTML='';
+      t.groups.forEach(function(g){
+        var b=document.createElement('button'); b.className='ghost'; b.style.textAlign='left'; b.textContent='📁 '+g.title;
+        b.onclick=function(e){ e.preventDefault(); it.groupId=g.id; save(); cleanup(); };
+        list.appendChild(b);
+      });
+      cancel.onclick=function(e){ e.preventDefault(); cleanup(); };
+      clear.onclick=function(e){ e.preventDefault(); it.groupId=null; save(); cleanup(); };
+    }catch(e){ console.error(e); showErr(e); }
+  };
+  function showErr(e){
+    try{var el=document.getElementById('errorOverlay'); var pre=document.getElementById('errorText'); if(el&&pre){ pre.textContent=(e&&e.stack)||e; el.style.display='block'; }}catch(_){}
   }
-  renderList();
-  add.onclick=function(){ var v=(name.value||'').trim(); if(!v) return; t.groups.push({id:uid(), title:v}); name.value=''; save(); renderList(); };
-  close.onclick=function(){ cleanup(); };
-}
-
-function assignGroup(taskId, itemId){
-  var t=(window.tasks||[]).find(function(x){return x.id===taskId;}); if(!t) return;
-  var it=(t.items||[]).find(function(i){return i.id===itemId;}); if(!it) return;
-  if(!Array.isArray(t.groups)||t.groups.length===0){ alert('Сначала создайте папку через «Группы».'); return; }
-  var modal=_el('groupAssignModal'), list=_el('assignGroupList'), cancel=_el('assignCancel'), clear=_el('assignClear');
-  if(!modal||!list||!cancel||!clear){ alert('UI назначения папки недоступен'); return; }
-  modal.style.display='flex';
-  function cleanup(){ modal.style.display='none'; cancel.onclick=null; clear.onclick=null; document.removeEventListener('keydown',onKey); }
-  function onKey(e){ if(e.key==='Escape') cleanup(); }
-  document.addEventListener('keydown', onKey);
-  list.innerHTML='';
-  t.groups.forEach(function(g){
-    var b=document.createElement('button'); b.className='ghost'; b.style.textAlign='left'; b.textContent='📁 '+g.title;
-    b.onclick=function(e){ e.preventDefault(); it.groupId=g.id; save(); cleanup(); renderChecklist(t); };
-    list.appendChild(b);
-  });
-  cancel.onclick=function(e){ e.preventDefault(); cleanup(); };
-  clear.onclick=function(e){ e.preventDefault(); it.groupId=null; save(); cleanup(); renderChecklist(t); };
-}
-
-window.__showErrorOverlay=function(msg){try{var el=document.getElementById('errorOverlay');var pre=document.getElementById('errorText');if(el&&pre){pre.textContent=String(msg||'Unknown');el.style.display='block';}}catch(e){}}
-window.addEventListener('error',e=>__showErrorOverlay((e&&e.error&&e.error.stack)||e.message||e.toString()));
-window.addEventListener('unhandledrejection',e=>__showErrorOverlay((e&&e.reason&&(e.reason.stack||e.reason.message))||'Unhandled rejection'));
-(function(){var b=document.getElementById('diagBanner'); if(b) b.textContent += ' • JS loaded';})();
+  // JS loaded indicator
+  (function(){var b=document.getElementById('diagBanner'); if(b) b.textContent += ' • JS loaded';})();
+})();

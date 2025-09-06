@@ -1,1 +1,1 @@
-// no SW in lite2 build
+// no SW in lite3 build
