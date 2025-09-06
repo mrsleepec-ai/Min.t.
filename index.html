@@ -1,190 +1,44 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mint</title>
-  <meta name="theme-color" content="#0ea5e9">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Mint">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <link rel="manifest" href="manifest.webmanifest?v=53">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <style>
-    :root{--bg:#0b1220;--fg:#e6eefc;--card:#111a33;--muted:#93a4bf;--accent:#0ea5e9;--line:rgba(255,255,255,.12)}
-    @media (prefers-color-scheme:light){:root{--bg:#f6f8fc;--fg:#0b1220;--card:#fff;--muted:#5b6b86;--accent:#0ea5e9;--line:rgba(0,0,0,.12)}}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--fg)}
-    header{position:fixed;top:0;left:0;right:0;background:#0ea5e9;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid var(--line);z-index:5}
-    h1{margin:0;font-size:18px;color:#ffffff}
-    main{max-width:820px;margin:0 auto;padding:16pxpadding-bottom:60px;padding-top:calc(64px + env(safe-area-inset-top));}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
-    form.add{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:10px}
-    input[type="text"],input[type="number"]{padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--fg);outline:none}
-    input[type="text"]:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(14,165,233,.25)}
-    button{border:none;background:var(--accent);color:#fff;border-radius:10px;padding:10px 12px;font-weight:600;cursor:pointer}
-    button.ghost{background:transparent;border:1px solid var(--line);color:var(--fg)}
-    ul{list-style:none;padding:0;margin:0;display:grid;gap:8px}
-    li.row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,.03);position:relative}
-    .row .title{min-width:0;word-break:break-word}
-    .actions{display:flex;gap:6px;position:relative;z-index:3}
-    .row input[type="checkbox"]{width:18px;height:18px;position:relative;z-index:3}
-    a.row-link{position:absolute;inset:0;border-radius:12px;color:inherit;text-decoration:none;z-index:1}
-    .muted{color:var(--muted);font-size:13px}
-    .breadcrumbs{margin-bottom:8px}
-    .breadcrumbs a{color:inherit;text-decoration:none;opacity:.85}
-    textarea{width:100%;min-height:160px;padding:12px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--fg)}
-    .note-thumb{max-width:96px;max-height:96px;border-radius:8px;border:1px solid var(--line)}
-    .note-thumb-wrap{position:relative;display:inline-block}
-    .note-del{position:absolute;top:4px;right:4px;background:#e11d48;color:#fff;border:none;border-radius:8px;padding:2px 6px;font-size:12px}
-    #confirmModal,#pdfChoiceModal,#checklistParamsModal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.5);z-index:210}
-    .modal-box{background:var(--card);padding:20px;border-radius:12px;max-width:360px;width:92%;box-shadow:0 6px 30px rgba(0,0,0,.45);display:grid;gap:14px}
-    #tabs .active{ background:var(--accent); color:#fff; border-color:transparent; }
-  
-    /* Portrait-only overlay */
-    #orientationLock{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0b1220;color:#e6eefc;z-index:9999;text-align:center;padding:24px}
-    #orientationLock .box{max-width:520px}
-    #orientationLock h2{margin:0 0 8px;font-size:22px}
-    #orientationLock p{margin:0;opacity:.8}
-        
-        /* Update bar */
-        #updateBar{position:fixed;left:0;right:0;bottom:calc(12px + env(safe-area-inset-bottom));display:none;justify-content:center;z-index:120}
-        #updateBar .inner{background:#111a33;border:1px solid var(--line);color:var(--fg);padding:10px 12px;border-radius:12px;display:flex;gap:10px;align-items:center;box-shadow:0 4px 18px rgba(0,0,0,.35)}
-        #updateBar button{background:#0ea5e9;border:none;color:#fff;padding:8px 10px;border-radius:8px;font-weight:600}
-        
-    /* iOS keyboard fix */
-    input[type="text"], input[type="number"], textarea {
-      font-size:16px; /* prevents iOS from suppressing keyboard when user-scalable=no */
-      -webkit-text-size-adjust: 100%;
-      pointer-events:auto;
-    }
-    
-    /* In-app PDF viewer overlay */
-    #pdfViewer{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;flex-direction:column;z-index:220}
-    #pdfViewer header{display:flex;align-items:center;gap:8px;padding:calc(2px + env(safe-area-inset-top)) 12px 8px;background:#0b1220;border-bottom:1px solid var(--line)}
-    #pdfViewer header button{background:#0ea5e9;color:#fff;border:none;border-radius:10px;padding:8px 10px;font-weight:600}
-    #pdfViewer header .ghost{background:transparent;border:1px solid var(--line);color:#e6eefc}
-    #pdfViewer iframe{flex:1;border:0;width:100%;background:#fff}
-        </style>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header><h1 id="appTitle">Mint</h1></header>
-  <main>
-<div id="updateBar"><div class="inner">Доступна новая версия <button id="updateNowBtn">Обновить</button></div></div>
-    <!-- List -->
-    <section id="view-list" class="card" hidden>
-      <div id="tabs" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-        <button id="tabActive" class="ghost">Активные</button>
-        <button id="tabDone" class="ghost">Выполненные</button>
-        <button id="tabAll" class="ghost">Все</button>
+  <header class="app-header">Mint</header>
+  <main class="container">
+    <section id="view-list">
+      <div class="new-task">
+        <input id="newTaskTitle" placeholder="Новая задача..." />
+        <button id="addTaskBtn">Добавить</button>
       </div>
-      <form id="addTask" class="add" autocomplete="off">
-        <input id="taskTitle" type="text" maxlength="120" placeholder="Новая задача…" required>
-        <button>Добавить</button>
-      </form>
-      <ul id="tasks" class="tasks"></ul>
-      <p id="tasksEmpty" class="muted" hidden>Список пуст.</p>
+      <div id="taskList"></div>
     </section>
 
-    <!-- Detail -->
-    <section id="view-detail" class="card" hidden>
-      <div class="breadcrumbs"><a href="#/">← Задачи</a></div>
-      <div class="muted" id="taskHeader"></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px;">
-        <button id="pdfBtn" class="ghost">PDF</button>
-        <button id="renameTaskBtn" class="ghost">✏️ Переименовать</button>
-        <button id="deleteTaskBtn" class="ghost" style="border-color:#e11d48;color:#e11d48">🗑️ Удалить задачу</button>
+    <section id="view-detail" class="hidden">
+      <button id="backBtn" class="back-btn">← Назад</button>
+      <h2 id="taskTitle"></h2>
+      <div class="new-subtask">
+        <input id="newSubtaskTitle" placeholder="Новая подзадача (пример: UI/Сверстать экран)"/>
+        <button id="addSubtaskBtn">Добавить</button>
       </div>
-      <form id="addSub" class="add" autocomplete="off">
-        <input id="subTitle" type="text" maxlength="160" placeholder="Новая подзадача…" required>
-        <button>Добавить</button>
-      </form>
-      <ul id="checkList" class="check"></ul>
-      <p id="emptyCheck" class="muted" hidden>Подзадач пока нет.</p>
+      <div class="hint-subtasks">
+        Для папок используйте префикс: <code>UI/Сверстать</code>, <code>Бэклог::Навигация</code> или <code>Техдолг &gt; Рефакторинг</code>.
+      </div>
+      <div id="checklist"></div>
     </section>
+  </main>
 
-    <!-- Note -->
-    <section id="view-note" class="card" hidden>
-      <nav class="breadcrumbs">
-        <a href="#/">← Список</a> / <a id="crumbTask" href="#">Задача</a> / <strong>Примечание</strong>
-      </nav>
-      <div style="display:grid;gap:10px;">
-        <div><div class="muted">Подзадача</div><div id="noteSubtaskText" style="font-weight:600;"></div></div>
-        <label for="noteText" class="muted">Примечание</label>
-        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-          <button id="noteAttachBtn" class="ghost">📎 Добавить фото</button>
-          <input id="noteAttachInput" type="file" accept="image/*" capture="environment" style="display:none;">
-          <div id="notePhotos" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
-        </div>
-        <textarea id="noteText" placeholder="Введите заметку…"></textarea>
-        <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button id="saveNoteBtn">Сохранить</button>
-        </div>
-      </div>
-    </section>
-  
-    <div id="pdfViewer">
-      <header>
-        <button id="pdfCloseBtn">← Назад</button>
-        <button id="pdfOpenSafari" class="ghost">Открыть в Safari</button>
-        <button id="pdfDownloadBtn" class="ghost">Скачать</button>
-      </header>
-      <iframe id="pdfFrame" title="Просмотр PDF/печати"></iframe>
-    </div>
-    </main>
-
-  <!-- Confirm modal -->
-  <div id="confirmModal" class="modal">
-    <div class="modal-box">
-      <div id="confirmText">Вы действительно хотите удалить?</div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;">
-        <button id="confirmCancel" class="ghost">Отмена</button>
-        <button id="confirmOk" style="background:#e11d48;">Удалить</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- PDF Choice Modal -->
-  <div id="pdfChoiceModal" class="modal">
-    <div class="modal-box">
-      <div style="font-weight:700">Экспорт в PDF</div>
-      <div style="display:grid;gap:10px;">
-        <button id="optChecklist" class="ghost" style="display:flex;gap:10px;align-items:center;justify-content:flex-start;padding:12px;border-radius:10px;">
-          <span>✅</span><div><div style="font-weight:600">Чек‑лист</div><div class="muted" style="font-size:12px">таблица с датами</div></div>
-        </button>
-        <button id="optDescription" class="ghost" style="display:flex;gap:10px;align-items:center;justify-content:flex-start;padding:12px;border-radius:10px;">
-          <span>📝</span><div><div style="font-weight:600">Описание</div><div class="muted" style="font-size:12px">подзадачи + примечания + фото</div></div>
-        </button>
-      </div>
-      <div style="display:flex;justify-content:flex-end;">
-        <button id="pdfChoiceCancel" class="ghost">Отмена</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Checklist Params Modal -->
-  <div id="checklistParamsModal" class="modal">
-    <div class="modal-box">
-      <div style="font-weight:700">Параметры чек‑листа</div>
-      <div style="display:grid;gap:10px;">
-        <label class="muted" style="display:grid;gap:6px;">Кол-во дней
-          <input id="paramDays" type="number" min="1" max="60" value="7">
-        </label>
-        <label class="muted" style="display:grid;gap:6px;">Пустых строк
-          <input id="paramExtra" type="number" min="0" max="50" value="0">
-        </label>
-        <label class="muted" style="display:flex;align-items:center;gap:8px;">
-          <input id="paramLandscape" type="checkbox"> Альбомная ориентация (горизонтально)
-        </label>
-      </div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;">
-        <button id="paramsCancel" class="ghost">Отмена</button>
-        <button id="paramsCreate">Создать PDF</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="orientationLock"><div class="box"><h2>Поверните устройство</h2><p>Приложение работает только в портретной ориентации.</p></div></div>
-<script src="app.v60.js"></script>
+  <script src="app.v60.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./sw.js');
+      });
+    }
+  </script>
 </body>
 </html>
