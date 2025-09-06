@@ -1,5 +1,5 @@
-// Minimal Tasks v41
-const storeKey='minimal_tasks_v41';
+// Minimal Tasks v47
+const storeKey='minimal_tasks_v45';
 let tasks=[];
 try{ tasks=JSON.parse(localStorage.getItem(storeKey)||'[]'); }catch{ tasks=[]; }
 for(const t of tasks){ if(typeof t.done!=='boolean') t.done=false; if(!Array.isArray(t.items)) t.items=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; } }
@@ -44,12 +44,13 @@ const els={
   optChecklist: document.getElementById('optChecklist'),
   optDescription: document.getElementById('optDescription'),
   pdfChoiceCancel: document.getElementById('pdfChoiceCancel'),
+  // checklist params
   checklistParamsModal: document.getElementById('checklistParamsModal'),
   paramDays: document.getElementById('paramDays'),
   paramExtra: document.getElementById('paramExtra'),
+  paramLandscape: document.getElementById('paramLandscape'),
   paramsCancel: document.getElementById('paramsCancel'),
   paramsCreate: document.getElementById('paramsCreate'),
-  paramLandscape: document.getElementById('paramLandscape'),
 };
 
 function save(){ localStorage.setItem(storeKey, JSON.stringify(tasks)); }
@@ -58,6 +59,7 @@ function uid(){ return Math.random().toString(36).slice(2,10); }
 // Routing
 window.addEventListener('hashchange', route);
 window.addEventListener('load', ()=>{ if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js'); route(); });
+window.addEventListener('DOMContentLoaded', ()=>{ try{route();}catch(e){console.error(e);} });
 
 function route(){
   const parts=(location.hash||'#/').slice(2).split('/').filter(Boolean);
@@ -96,7 +98,7 @@ function setTabLabels(){
 
 // List
 function showTasks(){
-  els.viewList.hidden=false; els.appTitle.textContent='Minimal Tasks v44'; setTabLabels();
+  els.viewList.hidden=false; els.appTitle.textContent='Minimal Tasks v47'; setTabLabels();
   // tabs
   if(els.tabActive){ els.tabActive.classList.toggle('active', taskFilter==='active'); els.tabActive.onclick=()=>{ taskFilter='active'; localStorage.setItem('mt_filter', taskFilter); showTasks(); }; }
   if(els.tabDone){ els.tabDone.classList.toggle('active', taskFilter==='done'); els.tabDone.onclick=()=>{ taskFilter='done'; localStorage.setItem('mt_filter', taskFilter); showTasks(); }; }
@@ -154,8 +156,7 @@ function renderChecklist(t){
   for(const it of items){
     const li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
     const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!it.done;
-    cb.addEventListener('change', e=>{ e.preventDefault(); e.stopPropagation(); it.done=cb.checked; // auto mark task
-      const allDone=(t.items||[]).length>0 && (t.items||[]).every(x=>x.done); t.done=allDone; save(); setTabLabels(); });
+    cb.addEventListener('change', e=>{ e.preventDefault(); e.stopPropagation(); it.done=cb.checked; const allDone=(t.items||[]).length>0 && (t.items||[]).every(x=>x.done); t.done=allDone; save(); setTabLabels(); });
     const title=document.createElement('div'); title.className='title'; title.textContent=it.title;
     const actions=document.createElement('div'); actions.className='actions';
     const attachBtn=ghost('📎', ()=> attachPhoto(t.id, it.id));
@@ -184,14 +185,13 @@ function removeItem(taskId, itemId){
 }
 
 // Note & photos
-let noteCtx={taskId:null,itemId:null};
 function showNote(taskId, itemId){
   const t=tasks.find(x=>x.id===taskId); if(!t){ location.hash='#/'; return; }
   const it=(t.items||[]).find(i=>i.id===itemId); if(!it){ location.hash='#/task/'+taskId; return; }
   els.viewNote.hidden=false; els.appTitle.textContent='Примечание';
   els.crumbTask.textContent=t.title; els.crumbTask.href='#/task/'+taskId;
-  els.noteSubtaskText.textContent=it.title; els.noteText.value=it.note||'';
   noteCtx={taskId,itemId};
+  els.noteSubtaskText.textContent=it.title; els.noteText.value=it.note||'';
   renderNotePhotos(it);
   els.noteAttachBtn.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); els.noteAttachInput.removeAttribute('capture'); const ch=prompt('Фото: 1 — Камера, 2 — Галерея','2'); if(ch==='1') els.noteAttachInput.setAttribute('capture','environment'); els.noteAttachInput.click(); };
   els.noteAttachInput.onchange=async (e)=>{ const f=e.target.files&&e.target.files[0]; if(!f) return; await attachPhotoToNote(taskId,itemId,f); e.target.value=''; };
@@ -199,6 +199,7 @@ function showNote(taskId, itemId){
   els.saveNoteBtn.onclick=()=>{ it.note=els.noteText.value; save(); els.saveNoteBtn.textContent='Сохранено'; setTimeout(()=>els.saveNoteBtn.textContent='Сохранить',800); };
 }
 
+let noteCtx={taskId:null,itemId:null};
 async function renderNotePhotos(it){
   els.notePhotos.innerHTML='';
   for(const key of (it.notePhotoKeys||[])){
@@ -219,7 +220,7 @@ function attachPhoto(taskId, itemId){
 }
 
 function openLightbox(url){
-  const w=window.open('','_blank'); w.document.write('<img src="'+url+'" style="max-width:100%;height:auto">');
+  const w=window.open('','_blank'); w.document.write('<img src=\"'+url+'\" style=\"max-width:100%;height:auto\">');
 }
 
 function compressImageToDataURL(file, maxSize, quality){
@@ -235,6 +236,7 @@ function compressImageToDataURL(file, maxSize, quality){
   });
 }
 
+// IndexedDB
 const DB_NAME='mtasks'; const DB_VER=1;
 let dbPromise=null;
 function openDB(){ if(!('indexedDB' in window)) return null; if(dbPromise) return dbPromise;
@@ -258,8 +260,9 @@ async function attachPhotoToNote(taskId,itemId,file){
   if(!els.viewNote.hidden) renderNotePhotos(it);
 }
 
-// PDF: description exporter
+// PDF: helpers
 async function blobToDataURL(blob){ return await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); }); }
+
 async function exportDescriptionPDF(task, preopenWin){
   const items=task.items||[]; const sections=[];
   for(const [idx,it] of items.entries()){
@@ -269,49 +272,49 @@ async function exportDescriptionPDF(task, preopenWin){
     }
     sections.push({ idx: idx+1, title: it.title||'', note: it.note||'', photos });
   }
-  let html = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${task.title} — описание</title>
-  <style>@page{size:auto;margin:14mm}body{font-family:-apple-system,system-ui,"Segoe UI",Roboto,Arial;color:#111}
+  let html = `<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\"><title>${task.title} — описание</title>
+  <style>@page{size:auto;margin:14mm}body{font-family:-apple-system,system-ui,\"Segoe UI\",Roboto,Arial;color:#111}
   h1{font-size:18pt;margin:0 0 10pt;text-align:center}.section{page-break-inside:avoid;border:1px solid #222;border-radius:8px;padding:10pt;margin:0 0 10pt}
   .h{font-weight:700;margin-bottom:6pt}.note{white-space:pre-wrap;font-size:10.5pt;margin:6pt 0 4pt}.photos{display:flex;gap:6pt;flex-wrap:wrap}
   .photos img{max-height:120pt;border:1px solid #999;border-radius:6px}.meta{display:flex;justify-content:space-between;font-size:9pt;color:#333;margin:2pt 0 8pt}
   @media print{.no-print{display:none}}</style></head><body>
-  <div class="no-print" style="text-align:right;margin-bottom:8pt;"><button onclick="window.print()">Печать/Сохранить в PDF</button></div><h1>${task.title}</h1>`;
+  <div class=\"no-print\" style=\"text-align:right;margin-bottom:8pt;\"><button onclick=\"window.print()\">Печать/Сохранить в PDF</button></div><h1>${task.title}</h1>`;
   for(const s of sections){
-    html += `<div class="section"><div class="meta"><div>№ ${s.idx}</div><div></div></div>
-      <div class="h">${s.title.replace(/</g,'&lt;')}</div>
-      ${s.note?`<div class="note">${s.note.replace(/</g,'&lt;')}</div>`:''}
-      ${s.photos && s.photos.length?`<div class="photos">`+s.photos.map(u=>`<img src="${u}">`).join('')+`</div>`:''}
+    html += `<div class=\"section\"><div class=\"meta\"><div>№ ${s.idx}</div><div></div></div>
+      <div class=\"h\">${s.title.replace(/</g,'&lt;')}</div>
+      ${s.note?`<div class=\"note\">${s.note.replace(/</g,'&lt;')}</div>`:''}
+      ${s.photos && s.photos.length?`<div class=\"photos\">`+s.photos.map(u=>`<img src=\"${u}\">`).join('')+`</div>`:''}
     </div>`;
   }
   html += `</body></html>`;
-  const win = preopenWin || window.open('','_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; } win.document.open(); win.document.write(html); win.document.close();
+  const win = preopenWin || window.open('','_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; }
+  win.document.open(); win.document.write(html); win.document.close();
 }
 
-// PDF: checklist exporter (pre-open window will be used from caller)
 async function exportChecklistPDF(task, preopenWin, days, extra, landscape){
   const rows = (task.items||[]).concat(Array.from({length:extra||0}, ()=>({title:''})));
   const dates=[]; const today=new Date();
   for(let i=0;i<days;i++){ const d=new Date(today.getTime()+i*86400000); const dd=d.toLocaleDateString('ru-RU'); dates.push(dd); }
-  let html = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${task.title} — чек-лист</title>
-  <style>@page{size:${'auto'};margin:16mm}${landscape || (days||0)>12 ? '@page{size:A4 landscape;margin:16mm}' : ''} body{font-family:-apple-system,system-ui,"Segoe UI",Roboto,Arial;color:#111}
+  let html = `<!doctype html><html lang=\"ru\"><head><meta charset=\"utf-8\"><title>${task.title} — чек-лист</title>
+  <style>@page{size:${landscape||days>12 ? 'A4 landscape' : 'auto'};margin:16mm}body{font-family:-apple-system,system-ui,\"Segoe UI\",Roboto,Arial;color:#111}
   h1{font-size:18pt;margin:0 0 10pt;text-align:center}table{width:100%;border-collapse:collapse}
   th,td{border:1px solid #222;padding:5pt 5pt;font-size:9.5pt}th{background:#f2f2f2;text-align:center}td.n{text-align:center;width:28pt}td.t{white-space:pre-wrap}
   .meta{display:flex;justify-content:space-between;font-size:9.5pt;margin-bottom:8pt}@media print{.no-print{display:none}}</style>
-  </head><body><div class="no-print" style="text-align:right;margin-bottom:8pt;"><button onclick="window.print()">Печать/Сохранить в PDF</button></div><h1>${task.title}</h1>`;
-  html += `<table><colgroup><col style="width:28pt" /><col />${dates.map(_=>'<col style="width:32pt" />').join('')}</colgroup><thead><tr><th>№</th><th>Пункт</th>${dates.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>`;
-  rows.forEach((it,idx)=>{ html += `<tr><td class="n">${idx+1}</td><td class="t">${(it.title||'').replace(/</g,'&lt;')}</td>${dates.map(()=>'<td></td>').join('')}</tr>`; });
+  </head><body><div class=\"no-print\" style=\"text-align:right;margin-bottom:8pt;\"><button onclick=\"window.print()\">Печать/Сохранить в PDF</button></div><h1>${task.title}</h1>`;
+  html += `<table><colgroup><col style=\"width:28pt\" /><col />${dates.map(_=>'<col style=\"width:32pt\" />').join('')}</colgroup><thead><tr><th>№</th><th>Пункт</th>${dates.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach((it,idx)=>{ html += `<tr><td class=\"n\">${idx+1}</td><td class=\"t\">${(it.title||'').replace(/</g,'&lt;')}</td>${dates.map(()=>'<td></td>').join('')}</tr>`; });
   html += `</tbody></table></body></html>`;
   const win = preopenWin || window.open('','_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; }
   win.document.open(); win.document.write(html); win.document.close();
 }
 
-// PDF choice modal
+// PDF modals and flow
 function showPdfChoice(task){
   els.pdfChoiceModal.style.display='flex';
   function cleanup(){ els.pdfChoiceModal.style.display='none'; els.optChecklist.onclick=null; els.optDescription.onclick=null; els.pdfChoiceCancel.onclick=null; document.removeEventListener('keydown',onKey); }
   function onKey(e){ if(e.key==='Escape') cleanup(); }
   document.addEventListener('keydown', onKey);
-  els.optChecklist.onclick = async (e)=>{ e.preventDefault(); cleanup(); if(els.checklistParamsModal && els.paramDays && els.paramExtra){ showChecklistParams(task); } else { const win=window.open('','_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; } const d=7, ex=0; await exportChecklistPDF(task, win, d, ex, (d>12)); } };
+  els.optChecklist.onclick = (e)=>{ e.preventDefault(); cleanup(); showChecklistParams(task); };
   els.optDescription.onclick = async (e)=>{ e.preventDefault(); cleanup(); const win=window.open('','_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; } await exportDescriptionPDF(task, win); };
   els.pdfChoiceCancel.onclick = (e)=>{ e.preventDefault(); cleanup(); };
 }
@@ -320,43 +323,43 @@ function showChecklistParams(task){
   els.checklistParamsModal.style.display='flex';
   els.paramDays.value = els.paramDays.value || 7;
   els.paramExtra.value = els.paramExtra.value || 0;
-  // auto landscape suggestion
-  function applyLandscapeHint(){
-    const d = parseInt(els.paramDays.value||'7',10)||7;
-    els.paramLandscape.checked = d > 12;
-  }
+  function applyLandscapeHint(){ const d=parseInt(els.paramDays.value||'7',10)||7; els.paramLandscape.checked = d>12; }
   applyLandscapeHint();
   els.paramDays.oninput = applyLandscapeHint;
 
-  function cleanup(){ els.checklistParamsModal.style.display='none'; els.paramsCancel.onclick=null; els.paramsCreate.onclick=null; document.removeEventListener('keydown', onKey); els.paramDays.oninput=null; }
+  function cleanup(){ els.checklistParamsModal.style.display='none'; els.paramsCancel.onclick=null; els.paramsCreate.onclick=null; els.paramDays.oninput=null; document.removeEventListener('keydown', onKey); }
   function onKey(e){ if(e.key==='Escape') cleanup(); }
   document.addEventListener('keydown', onKey);
 
   els.paramsCancel.onclick = (e)=>{ e.preventDefault(); cleanup(); };
-
   els.paramsCreate.onclick = async (e)=>{
     e.preventDefault();
     const days = Math.max(1, Math.min(60, parseInt(els.paramDays.value||'7',10)||7));
     const extra = Math.max(0, Math.min(50, parseInt(els.paramExtra.value||'0',10)||0));
     const landscape = !!els.paramLandscape.checked;
     cleanup();
-    const win = window.open('', '_blank');
-    if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; }
+    const win = window.open('', '_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; }
     await exportChecklistPDF(task, win, days, extra, landscape);
   };
 }
-  function onKey(e){ if(e.key==='Escape') cleanup(); }
-  document.addEventListener('keydown', onKey);
-  els.paramsCancel.onclick = (e)=>{ e.preventDefault(); cleanup(); };
-  els.paramsCreate.onclick = async (e)=>{
-    e.preventDefault();
-    const days = Math.max(1, Math.min(60, parseInt(els.paramDays.value||'7',10)||7));
-    const extra = Math.max(0, Math.min(50, parseInt(els.paramExtra.value||'0',10)||0));
-    cleanup();
-    const win = window.open('', '_blank');
-    if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; }
-    await exportChecklistPDF(task, win, days, extra);
-  };
-}
 
-window.addEventListener('DOMContentLoaded', ()=>{ try{route();}catch(e){console.error(e);} });
+
+// --- Orientation lock (portrait-only UX) ---
+(function(){
+  const el = document.getElementById('orientationLock');
+  function update(){
+    const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+    el.style.display = isPortrait ? 'none' : 'flex';
+    // Prevent background scroll when overlay visible
+    document.documentElement.style.overflow = isPortrait ? '' : 'hidden';
+    document.body.style.overflow = isPortrait ? '' : 'hidden';
+  }
+  window.addEventListener('orientationchange', update);
+  window.addEventListener('resize', update);
+  document.addEventListener('visibilitychange', update);
+  // Try Screen Orientation API where available (won't work on iOS Safari, but safe)
+  if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock('portrait').catch(()=>{});
+  }
+  update();
+})();
