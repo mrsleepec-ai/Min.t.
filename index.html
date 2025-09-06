@@ -119,6 +119,10 @@
       ul.tasks li { position: relative; }
       ul.tasks li .actions { position: relative; z-index: 3; }
       .row-link { z-index: 1; }
+        
+      .note-thumb { max-width: 96px; max-height: 96px; border-radius: 8px; border: 1px solid color-mix(in oklab, var(--muted) 25%, transparent); }
+      .note-thumb-wrap { position: relative; display:inline-block; }
+      .note-del { position:absolute; top:4px; right:4px; background:#e11d48; color:#fff; border:none; border-radius:8px; padding:2px 6px; font-size:12px; }
         </style>
   </head>
   <body>
@@ -183,6 +187,7 @@
             <div id="noteSubtaskText" style="font-weight:600;"></div>
           </div>
           <label for="noteText" style="font-size:12px; opacity:.7;">Примечание</label>
+<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;"><button id="noteAttachBtn" class="ghost">📎 Добавить фото</button><input id="noteAttachInput" type="file" accept="image/*" capture="environment" style="display:none;"><div id="notePhotos" style="display:flex; gap:8px; flex-wrap:wrap;"></div></div>
           <textarea id="noteText" rows="10" placeholder="Введите примечание..." style="width:100%; border-radius:12px; padding:12px; border:1px solid color-mix(in oklab, var(--muted) 25%, transparent); background: color-mix(in oklab, var(--surface) 92%, #000 8%); color: var(--text);"></textarea>
           <div style="display:flex; gap:8px; justify-content:flex-end;">
             

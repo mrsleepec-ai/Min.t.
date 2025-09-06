@@ -17,6 +17,7 @@ if (Array.isArray(tasks)) {
       if (typeof it.photo !== 'string') it.photo = null; // dataURL or null
       if (typeof it.photoKey !== 'string') it.photoKey = null;
       if (typeof it.note !== 'string') it.note = '';
+      if (!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys = [];
     }
   }
 } else {
@@ -69,6 +70,42 @@ function showConfirm(message, onOk){
   els.confirmOk.onclick = ()=>{ cleanup(); onOk(); };
 }
 function uid() { return Math.random().toString(36).slice(2, 10); }
+
+// --- IndexedDB helpers for photos in notes ---
+const DB_NAME = 'mtasks'; const DB_VER = 1;
+let dbPromise = null;
+function openDB(){
+  if (!('indexedDB' in window)) return null;
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('photos')) db.createObjectStore('photos');
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return dbPromise;
+}
+async function idbSet(key, blob){
+  const db = await openDB(); if (!db) throw new Error('IDB unavailable');
+  return new Promise((res, rej)=>{ const tx=db.transaction('photos','readwrite'); tx.objectStore('photos').put(blob, key); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); });
+}
+async function idbGet(key){
+  const db = await openDB(); if (!db) return null;
+  return new Promise((res, rej)=>{ const tx=db.transaction('photos','readonly'); const req=tx.objectStore('photos').get(key); req.onsuccess=()=>res(req.result||null); req.onerror=()=>rej(req.error); });
+}
+async function idbDel(key){
+  const db = await openDB(); if (!db) return;
+  return new Promise((res, rej)=>{ const tx=db.transaction('photos','readwrite'); tx.objectStore('photos').delete(key); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); });
+}
+function dataURLtoBlob(dataUrl){
+  const [meta, b64] = dataUrl.split(','); const mime = (meta.match(/data:(.*?);/)||[])[1] || 'image/jpeg';
+  const bin = atob(b64); const u8 = new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+  return new Blob([u8], {type:mime});
+}
+
 
 function wrap16(str, n) {
   const s = String(str);
@@ -285,12 +322,16 @@ els.addCheckForm.addEventListener('submit', (e) => {
 });
 
 /* ---------- Photo Attachments ---------- */
-function attachPhoto(taskId, itemId) {
+function attachPhoto(taskId, itemId) { // redirect to note and attach there
   // Simple choice: Camera or Gallery
   const choice = window.prompt('Фото: введите 1 — Камера, 2 — Галерея', '2');
   if (choice === null) return;
   const useCamera = String(choice).trim() === '1';
 
+  location.hash = '#/note/' + taskId + '/' + itemId;
+  setTimeout(()=>{
+    const noteBtn = document.getElementById('noteAttachBtn'); if(noteBtn) noteBtn.click();
+  }, 100);
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
@@ -361,6 +402,8 @@ function openPdfDialog(taskId) {
   const task = tasks.find(t => t.id === taskId);
   if (!task) return;
 
+  const type = prompt('PDF: 1 — Чек‑лист, 2 — Описание', '1');
+  if (type && type.trim() === '2') { await exportDescriptionPDF(task); return; }
   const daysStr = prompt('Сколько дней (колонки дат) добавить?', '7');
   if (daysStr === null) return;
   const days = Math.max(1, Math.min(365, parseInt(daysStr || '7', 10)));
@@ -450,6 +493,11 @@ function showNote(taskId, itemId) {
   els.crumbTask.href = '#/task/' + taskId;
   els.noteSubtaskText.textContent = it.title;
   els.noteText.value = it.note || '';
+  const noteAttachBtn = document.getElementById('noteAttachBtn');
+  const noteAttachInput = document.getElementById('noteAttachInput');
+  renderNotePhotos(it);
+  noteAttachBtn.onclick = (e)=>{ e.preventDefault(); e.stopPropagation(); noteAttachInput.removeAttribute('capture'); const choice = window.prompt('Фото: 1 — Камера, 2 — Галерея','2'); if(choice==='1') noteAttachInput.setAttribute('capture','environment'); noteAttachInput.click(); };
+  noteAttachInput.onchange = async ()=>{ const f = noteAttachInput.files && noteAttachInput.files[0]; if(!f) return; await attachPhotoToNote(taskId, itemId, f); noteAttachInput.value=''; };
 
   // Autosave (already injected earlier if present)
   els.saveNoteBtn.onclick = () => {
@@ -458,3 +506,94 @@ function showNote(taskId, itemId) {
     setTimeout(() => els.saveNoteBtn.textContent = 'Сохранить', 800);
   };
   }
+
+
+// --- Note Photos Logic ---
+async function attachPhotoToNote(taskId, itemId, file){
+  const t = tasks.find(x => x.id === taskId); if (!t) return;
+  const it = (t.items||[]).find(i => i.id === itemId); if (!it) return;
+  try {
+    const dataUrl = await compressImageToDataURL(file, 1600, 0.8);
+    const blob = dataURLtoBlob(dataUrl);
+    const key = 'notephoto-' + itemId + '-' + Date.now() + '-' + Math.random().toString(36).slice(2,7);
+    await idbSet(key, blob);
+    it.notePhotoKeys.push(key);
+    save();
+    // If we are on note screen, render immediately
+    if (!els.viewNote.hidden && els.noteText) renderNotePhotos(it);
+  } catch (e) {
+    alert('Не удалось добавить фото: ' + e);
+  }
+}
+async function renderNotePhotos(it){
+  const wrap = document.getElementById('notePhotos'); if (!wrap) return;
+  wrap.innerHTML = '';
+  for (const key of (it.notePhotoKeys||[])){
+    const blob = await idbGet(key);
+    if (!blob) continue;
+    const url = URL.createObjectURL(blob);
+    const w = document.createElement('div'); w.className='note-thumb-wrap';
+    const img = document.createElement('img'); img.className='note-thumb'; img.src=url; img.alt='Фото';
+    const del = document.createElement('button'); del.className='note-del'; del.textContent='✖';
+    del.addEventListener('click', async (e)=>{ e.preventDefault(); e.stopPropagation(); await idbDel(key); it.notePhotoKeys = it.notePhotoKeys.filter(k=>k!==key); save(); renderNotePhotos(it); });
+    img.addEventListener('click', ()=> openLightbox(url));
+    w.append(img, del);
+    wrap.append(w);
+  }
+}
+
+async function blobToDataURL(blob){
+  return await new Promise((res, rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); });
+}
+
+async function exportDescriptionPDF(task){
+  // Build sections with notes and photos
+  const items = task.items || [];
+  const sections = [];
+  for (const [idx, it] of items.entries()){
+    const photos = [];
+    if (Array.isArray(it.notePhotoKeys)){
+      for (const key of it.notePhotoKeys){
+        const blob = await idbGet(key);
+        if (blob) { const dataUrl = await blobToDataURL(blob); photos.push(dataUrl); }
+      }
+    }
+    sections.push({ idx: idx+1, title: it.title || '', note: it.note || '', photos });
+  }
+
+  let html = `<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<title>${task.title} — описание</title>
+<style>
+  @page { size: auto; margin: 14mm; }
+  body { font-family: -apple-system, system-ui, "Segoe UI", Roboto, Arial; color: #111; }
+  h1 { font-size: 18pt; margin: 0 0 10pt; text-align: center; }
+  .section { page-break-inside: avoid; border: 1px solid #222; border-radius: 8px; padding: 10pt; margin: 0 0 10pt; }
+  .h { font-weight: 700; margin-bottom: 6pt; }
+  .note { white-space: pre-wrap; font-size: 10.5pt; margin: 6pt 0 4pt; }
+  .photos { display: flex; gap: 6pt; flex-wrap: wrap; }
+  .photos img { max-height: 120pt; border: 1px solid #999; border-radius: 6px; }
+  .meta { display:flex; justify-content: space-between; font-size: 9pt; color:#333; margin: 2pt 0 8pt; }
+  @media print { .no-print { display:none; } }
+</style>
+</head><body>
+  <div class="no-print" style="text-align:right; margin-bottom:8pt;">
+    <button onclick="window.print()">Печать/Сохранить в PDF</button>
+  </div>
+  <h1>${task.title}</h1>
+`;
+
+  for (const s of sections){
+    html += `<div class="section">
+      <div class="meta"><div>№ ${s.idx}</div><div></div></div>
+      <div class="h">${s.title.replace(/</g,'&lt;')}</div>
+      ${s.note ? `<div class="note">${s.note.replace(/</g,'&lt;')}</div>` : ''}
+      ${s.photos && s.photos.length ? `<div class="photos">` + s.photos.map(u=>`<img src="${u}">`).join('') + `</div>` : ''}
+    </div>`;
+  }
+
+  html += `</body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.open(); win.document.write(html); win.document.close();
+}
