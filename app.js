@@ -1,5 +1,5 @@
-// Minimal Tasks v35
-const storeKey='minimal_tasks_v35';
+// Minimal Tasks v38
+const storeKey='minimal_tasks_v38';
 let tasks=[];
 try{ tasks=JSON.parse(localStorage.getItem(storeKey)||'[]'); }catch{ tasks=[]; }
 for(const t of tasks){ if(!Array.isArray(t.items)) t.items=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; } }
@@ -36,6 +36,11 @@ const els={
   confirmText: document.getElementById('confirmText'),
   confirmCancel: document.getElementById('confirmCancel'),
   confirmOk: document.getElementById('confirmOk'),
+  // pdf choice
+  pdfChoiceModal: document.getElementById('pdfChoiceModal'),
+  optChecklist: document.getElementById('optChecklist'),
+  optDescription: document.getElementById('optDescription'),
+  pdfChoiceCancel: document.getElementById('pdfChoiceCancel'),
 };
 
 function save(){ localStorage.setItem(storeKey, JSON.stringify(tasks)); }
@@ -70,14 +75,14 @@ function ghost(text, onClick){ const b=document.createElement('button'); b.class
 
 // List
 function showTasks(){
-  els.viewList.hidden=false; els.appTitle.textContent='Minimal Tasks v35';
+  els.viewList.hidden=false; els.appTitle.textContent='Minimal Tasks v38';
   els.tasks.innerHTML=''; els.tasksEmpty.hidden = tasks.length>0;
   for(const t of tasks){
     const li=document.createElement('li'); li.className='row';
     const cb=document.createElement('input'); cb.type='checkbox'; cb.style.visibility='hidden';
     const title=document.createElement('div'); title.className='title'; title.textContent=t.title;
     const actions=document.createElement('div'); actions.className='actions';
-    const pdfBtn=ghost('PDF', ()=> exportPDF(t));
+    const pdfBtn=ghost('PDF', ()=> showPdfChoice(t));
     const editBtn=ghost('✏️', ()=> renameTask(t.id));
     const delBtn=ghost('🗑️', ()=> removeTask(t.id));
     actions.append(pdfBtn, editBtn, delBtn);
@@ -104,7 +109,7 @@ function showDetail(taskId){
   currentTaskId=taskId;
   els.viewDetail.hidden=false; els.appTitle.textContent='Подзадачи';
   els.taskHeader.textContent=t.title;
-  els.pdfBtn.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); exportPDF(t); };
+  els.pdfBtn.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); showPdfChoice(t); };
   els.renameTaskBtn.onclick=()=> renameTask(t.id);
   els.deleteTaskBtn.onclick=()=> removeTask(t.id);
 
@@ -181,7 +186,7 @@ function attachPhoto(taskId, itemId){
   setTimeout(()=>{ els.noteAttachBtn?.click(); }, 100);
 }
 
-// Lightbox (very simple)
+// Lightbox
 function openLightbox(url){
   const w=window.open('','_blank'); w.document.write('<img src="'+url+'" style="max-width:100%;height:auto">');
 }
@@ -224,7 +229,7 @@ async function attachPhotoToNote(taskId,itemId,file){
   if(!els.viewNote.hidden) renderNotePhotos(it);
 }
 
-// PDF: description exporter
+// PDF: description exporter (fresh data per run)
 async function blobToDataURL(blob){ return await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); }); }
 async function exportDescriptionPDF(task){
   const items=task.items||[]; const sections=[];
@@ -275,22 +280,13 @@ async function exportChecklistPDF(task){
   const win=window.open('','_blank'); win.document.open(); win.document.write(html); win.document.close();
 }
 
-// PDF: wrapper to always choose first
-async function exportPDF(task){
-  try{
-    const type = prompt('PDF: 1 — Чек‑лист, 2 — Описание', '1');
-    if(type && type.trim()==='2'){ await exportDescriptionPDF(task); return; }
-  }catch(e){}
-  await exportChecklistPDF(task);
+// PDF: clickable modal to choose type everywhere
+function showPdfChoice(task){
+  els.pdfChoiceModal.style.display='flex';
+  function cleanup(){ els.pdfChoiceModal.style.display='none'; els.optChecklist.onclick=null; els.optDescription.onclick=null; els.pdfChoiceCancel.onclick=null; document.removeEventListener('keydown',onKey); }
+  function onKey(e){ if(e.key==='Escape') cleanup(); }
+  document.addEventListener('keydown', onKey);
+  els.optChecklist.onclick = async (e)=>{ e.preventDefault(); cleanup(); await exportChecklistPDF(task); };
+  els.optDescription.onclick = async (e)=>{ e.preventDefault(); cleanup(); await exportDescriptionPDF(task); };
+  els.pdfChoiceCancel.onclick = (e)=>{ e.preventDefault(); cleanup(); };
 }
-// Also wrap any older direct calls to exportChecklistPDF
-(function(){
-  if(typeof exportChecklistPDF==='function'){
-    const __orig=exportChecklistPDF;
-    window.exportChecklistPDF = async function(task){
-      try{ const type=prompt('PDF: 1 — Чек‑лист, 2 — Описание','1'); if(type && type.trim()==='2'){ await exportDescriptionPDF(task); return; } }catch(e){}
-      return __orig(task);
-    };
-  }
-})();
-
