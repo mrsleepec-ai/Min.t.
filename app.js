@@ -49,6 +49,7 @@ const els={
   paramExtra: document.getElementById('paramExtra'),
   paramsCancel: document.getElementById('paramsCancel'),
   paramsCreate: document.getElementById('paramsCreate'),
+  paramLandscape: document.getElementById('paramLandscape'),
 };
 
 function save(){ localStorage.setItem(storeKey, JSON.stringify(tasks)); }
@@ -95,7 +96,7 @@ function setTabLabels(){
 
 // List
 function showTasks(){
-  els.viewList.hidden=false; els.appTitle.textContent='Minimal Tasks v42'; setTabLabels();
+  els.viewList.hidden=false; els.appTitle.textContent='Minimal Tasks v43'; setTabLabels();
   // tabs
   if(els.tabActive){ els.tabActive.classList.toggle('active', taskFilter==='active'); els.tabActive.onclick=()=>{ taskFilter='active'; localStorage.setItem('mt_filter', taskFilter); showTasks(); }; }
   if(els.tabDone){ els.tabDone.classList.toggle('active', taskFilter==='done'); els.tabDone.onclick=()=>{ taskFilter='done'; localStorage.setItem('mt_filter', taskFilter); showTasks(); }; }
@@ -287,12 +288,12 @@ async function exportDescriptionPDF(task, preopenWin){
 }
 
 // PDF: checklist exporter (pre-open window will be used from caller)
-async function exportChecklistPDF(task, preopenWin, days, extra){
+async function exportChecklistPDF(task, preopenWin, days, extra, landscape){
   const rows = (task.items||[]).concat(Array.from({length:extra||0}, ()=>({title:''})));
   const dates=[]; const today=new Date();
   for(let i=0;i<days;i++){ const d=new Date(today.getTime()+i*86400000); const dd=d.toLocaleDateString('ru-RU'); dates.push(dd); }
   let html = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${task.title} — чек-лист</title>
-  <style>@page{size:auto;margin:16mm}body{font-family:-apple-system,system-ui,"Segoe UI",Roboto,Arial;color:#111}
+  <style>@page{size:${'auto'};margin:16mm}${landscape || (days||0)>12 ? '@page{size:A4 landscape;margin:16mm}' : ''} body{font-family:-apple-system,system-ui,"Segoe UI",Roboto,Arial;color:#111}
   h1{font-size:18pt;margin:0 0 10pt;text-align:center}table{width:100%;border-collapse:collapse}
   th,td{border:1px solid #222;padding:5pt 5pt;font-size:9.5pt}th{background:#f2f2f2;text-align:center}td.n{text-align:center;width:28pt}td.t{white-space:pre-wrap}
   .meta{display:flex;justify-content:space-between;font-size:9.5pt;margin-bottom:8pt}@media print{.no-print{display:none}}</style>
@@ -310,7 +311,7 @@ function showPdfChoice(task){
   function cleanup(){ els.pdfChoiceModal.style.display='none'; els.optChecklist.onclick=null; els.optDescription.onclick=null; els.pdfChoiceCancel.onclick=null; document.removeEventListener('keydown',onKey); }
   function onKey(e){ if(e.key==='Escape') cleanup(); }
   document.addEventListener('keydown', onKey);
-  els.optChecklist.onclick = async (e)=>{ e.preventDefault(); cleanup(); showChecklistParams(task); };
+  els.optChecklist.onclick = async (e)=>{ e.preventDefault(); cleanup(); if(els.checklistParamsModal && els.paramDays && els.paramExtra){ showChecklistParams(task); } else { const win=window.open('','_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; } const d=7, ex=0; await exportChecklistPDF(task, win, d, ex, (d>12)); } };
   els.optDescription.onclick = async (e)=>{ e.preventDefault(); cleanup(); const win=window.open('','_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; } await exportDescriptionPDF(task, win); };
   els.pdfChoiceCancel.onclick = (e)=>{ e.preventDefault(); cleanup(); };
 }
@@ -319,7 +320,31 @@ function showChecklistParams(task){
   els.checklistParamsModal.style.display='flex';
   els.paramDays.value = els.paramDays.value || 7;
   els.paramExtra.value = els.paramExtra.value || 0;
-  function cleanup(){ els.checklistParamsModal.style.display='none'; els.paramsCancel.onclick=null; els.paramsCreate.onclick=null; document.removeEventListener('keydown', onKey); }
+  // auto landscape suggestion
+  function applyLandscapeHint(){
+    const d = parseInt(els.paramDays.value||'7',10)||7;
+    els.paramLandscape.checked = d > 12;
+  }
+  applyLandscapeHint();
+  els.paramDays.oninput = applyLandscapeHint;
+
+  function cleanup(){ els.checklistParamsModal.style.display='none'; els.paramsCancel.onclick=null; els.paramsCreate.onclick=null; document.removeEventListener('keydown', onKey); els.paramDays.oninput=null; }
+  function onKey(e){ if(e.key==='Escape') cleanup(); }
+  document.addEventListener('keydown', onKey);
+
+  els.paramsCancel.onclick = (e)=>{ e.preventDefault(); cleanup(); };
+
+  els.paramsCreate.onclick = async (e)=>{
+    e.preventDefault();
+    const days = Math.max(1, Math.min(60, parseInt(els.paramDays.value||'7',10)||7));
+    const extra = Math.max(0, Math.min(50, parseInt(els.paramExtra.value||'0',10)||0));
+    const landscape = !!els.paramLandscape.checked;
+    cleanup();
+    const win = window.open('', '_blank');
+    if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; }
+    await exportChecklistPDF(task, win, days, extra, landscape);
+  };
+}
   function onKey(e){ if(e.key==='Escape') cleanup(); }
   document.addEventListener('keydown', onKey);
   els.paramsCancel.onclick = (e)=>{ e.preventDefault(); cleanup(); };
