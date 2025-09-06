@@ -150,24 +150,59 @@ function showDetail(taskId){
   els.addSub.onsubmit=(e)=>{ e.preventDefault(); const v=els.subTitle.value.trim(); if(!v) return; (t.items ||= []).push({id:uid(), title:v, done:false, note:'', notePhotoKeys:[]}); t.done=false; save(); setTabLabels(); els.subTitle.value=''; renderChecklist(t); };
 }
 
+
+function splitFolderTitle(s){
+  if(!s) return {folder:'', title:''};
+  // Allow separators: "/", ">", "::"
+  let folder='', rest=s;
+  if(s.includes('::')) { const idx=s.indexOf('::'); folder=s.slice(0,idx).trim(); rest=s.slice(idx+2).trim(); }
+  else if(s.includes('/')) { const idx=s.indexOf('/'); folder=s.slice(0,idx).trim(); rest=s.slice(idx+1).trim(); }
+  else if(s.includes('>')) { const idx=s.indexOf('>'); folder=s.slice(0,idx).trim(); rest=s.slice(idx+1).trim(); }
+  return {folder, title:rest};
+}
+
 function renderChecklist(t){
   const items = t.items || [];
   els.checkList.innerHTML=''; els.emptyCheck.hidden = items.length>0;
+  // Group by folder (derived from title prefix)
+  const groups = {};
   for(const it of items){
-    const li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
-    const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!it.done;
-    cb.addEventListener('change', e=>{ e.preventDefault(); e.stopPropagation(); it.done=cb.checked; const allDone=(t.items||[]).length>0 && (t.items||[]).every(x=>x.done); t.done=allDone; save(); setTabLabels(); });
-    const title=document.createElement('div'); title.className='title'; title.textContent=it.title;
-    const actions=document.createElement('div'); actions.className='actions';
-    const attachBtn=ghost('📎', ()=> attachPhoto(t.id, it.id));
-    const editBtn=ghost('✏️', ()=> editItem(t.id, it.id));
-    const delBtn=ghost('🗑️', ()=> removeItem(t.id, it.id));
-    actions.append(attachBtn, editBtn, delBtn);
-    actions.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); });
-    const link=document.createElement('a'); link.className='row-link'; link.href='#/note/'+t.id+'/'+it.id;
-    li.append(cb,title,actions,link);
-    els.checkList.append(li);
+    const {folder, title} = splitFolderTitle(it.title||'');
+    const key = (folder||'__none__');
+    if(!groups[key]) groups[key] = [];
+    // create a shallow copy for display with stripped title
+    groups[key].push({ ...it, _displayTitle: title || (it.title||'') });
   }
+  const groupNames = Object.keys(groups).sort((a,b)=>{
+    const A = (a==='__none__') ? '￿' : a.toLocaleLowerCase();
+    const B = (b==='__none__') ? '￿' : b.toLocaleLowerCase();
+    return A.localeCompare(B);
+  });
+  for(const g of groupNames){
+    const isNone = (g==='__none__');
+    if(!isNone){
+      const h=document.createElement('li'); h.className='row'; h.style.background='transparent';
+      const hd=document.createElement('div'); hd.className='title muted'; hd.textContent=g;
+      h.append(document.createElement('div'), hd, document.createElement('div'));
+      els.checkList.append(h);
+    }
+    for(const it of groups[g]){
+      const li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
+      const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!it.done;
+      cb.addEventListener('change', e=>{ e.preventDefault(); e.stopPropagation(); it.done=cb.checked; const allDone=(t.items||[]).length>0 && (t.items||[]).every(x=>x.done); t.done=allDone; save(); setTabLabels(); });
+      const title=document.createElement('div'); title.className='title'; title.textContent=it._displayTitle;
+      const actions=document.createElement('div'); actions.className='actions';
+      const attachBtn=ghost('📎', ()=> attachPhoto(t.id, it.id));
+      const editBtn=ghost('✏️', ()=> editItem(t.id, it.id));
+      const delBtn=ghost('🗑️', ()=> removeItem(t.id, it.id));
+      actions.append(attachBtn, editBtn, delBtn);
+      actions.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); });
+      const link=document.createElement('a'); link.className='row-link'; link.href='#/note/'+t.id+'/'+it.id;
+      li.append(cb,title,actions,link);
+      els.checkList.append(li);
+    }
+  }
+}
 }
 function editItem(taskId, itemId){
   const t=tasks.find(x=>x.id===taskId); if(!t) return;
@@ -494,62 +529,4 @@ function showChecklistParams(task){
       }
     };
   }
-})();
-
-
-// ---- Groups support (append-only; original logic untouched) ----
-(function(){
-  function _el(id){ return document.getElementById(id); }
-  function ensureTask(t){ if(!t) return null; if(!Array.isArray(t.items)) t.items=[]; if(!Array.isArray(t.groups)) t.groups=[]; return t; }
-  window.openGroupManage = function(taskId){
-    try{
-      var t=(window.tasks||[]).find(function(x){return x.id===taskId;}); t=ensureTask(t); if(!t) return;
-      var modal=_el('groupManageModal'), list=_el('groupsList'), add=_el('addGroupBtn'), name=_el('newGroupName'), close=_el('groupManageClose');
-      if(!modal||!list||!add||!name||!close){ alert('UI папок недоступен'); return; }
-      modal.style.display='flex';
-      function cleanup(){ modal.style.display='none'; add.onclick=null; close.onclick=null; document.removeEventListener('keydown',onKey); }
-      function onKey(e){ if(e.key==='Escape') cleanup(); }
-      document.addEventListener('keydown', onKey);
-      function renderList(){
-        list.innerHTML='';
-        if(!t.groups.length){ var p=document.createElement('div'); p.className='muted'; p.textContent='Папок пока нет'; list.appendChild(p); }
-        t.groups.forEach(function(g){
-          var row=document.createElement('div'); row.style.cssText='display:flex;gap:8px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:8px 10px;';
-          var nm=document.createElement('div'); nm.textContent=g.title; nm.style.fontWeight='600';
-          var del=document.createElement('button'); del.className='ghost'; del.textContent='🗑️';
-          del.onclick=function(){ var used=(t.items||[]).some(function(it){return it.groupId===g.id;}); if(used){ alert('Нельзя удалить: есть подзадачи в этой папке.'); return; } t.groups=t.groups.filter(function(x){return x.id!==g.id;}); save(); renderList(); };
-          row.appendChild(nm); row.appendChild(del); list.appendChild(row);
-        });
-      }
-      renderList();
-      add.onclick=function(){ var v=(name.value||'').trim(); if(!v) return; t.groups.push({id:uid(), title:v}); name.value=''; save(); renderList(); };
-      close.onclick=function(){ cleanup(); };
-    }catch(e){ console.error(e); showErr(e); }
-  };
-  window.assignGroup = function(taskId,itemId){
-    try{
-      var t=(window.tasks||[]).find(function(x){return x.id===taskId;}); t=ensureTask(t); if(!t) return;
-      var it=(t.items||[]).find(function(i){return i.id===itemId;}); if(!it) return;
-      if(!Array.isArray(t.groups)||t.groups.length===0){ alert('Сначала создайте папку через меню задачи (кнопка Переименовать/Группы).'); return; }
-      var modal=_el('groupAssignModal'), list=_el('assignGroupList'), cancel=_el('assignCancel'), clear=_el('assignClear');
-      if(!modal||!list||!cancel||!clear){ alert('UI назначения папки недоступен'); return; }
-      modal.style.display='flex';
-      function cleanup(){ modal.style.display='none'; cancel.onclick=null; clear.onclick=null; document.removeEventListener('keydown',onKey); }
-      function onKey(e){ if(e.key==='Escape') cleanup(); }
-      document.addEventListener('keydown', onKey);
-      list.innerHTML='';
-      t.groups.forEach(function(g){
-        var b=document.createElement('button'); b.className='ghost'; b.style.textAlign='left'; b.textContent='📁 '+g.title;
-        b.onclick=function(e){ e.preventDefault(); it.groupId=g.id; save(); cleanup(); };
-        list.appendChild(b);
-      });
-      cancel.onclick=function(e){ e.preventDefault(); cleanup(); };
-      clear.onclick=function(e){ e.preventDefault(); it.groupId=null; save(); cleanup(); };
-    }catch(e){ console.error(e); showErr(e); }
-  };
-  function showErr(e){
-    try{var el=document.getElementById('errorOverlay'); var pre=document.getElementById('errorText'); if(el&&pre){ pre.textContent=(e&&e.stack)||e; el.style.display='block'; }}catch(_){}
-  }
-  // JS loaded indicator
-  (function(){var b=document.getElementById('diagBanner'); if(b) b.textContent += ' • JS loaded';})();
 })();
