@@ -1,6 +1,6 @@
 {
   "name": "Mint",
-  "short_name": "Tasks",
+  "short_name": "Mint",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#0ea5e9",
