@@ -541,43 +541,8 @@ function showChecklistParams(task){
   }
 })();
 
-function openGroupManage(taskId){
-  const t = tasks.find(x=>x.id===taskId); if(!t) return;
-  if(!Array.isArray(t.groups)) t.groups=[];
-  if(!els.groupManageModal){ alert('UI папок недоступен'); return; }
-  els.groupManageModal.style.display='flex';
-  function cleanup(){ els.groupManageModal.style.display='none'; els.addGroupBtn.onclick=null; els.groupManageClose.onclick=null; document.removeEventListener('keydown',onKey); }
-  function onKey(e){ if(e.key==='Escape') cleanup(); }
-  document.addEventListener('keydown', onKey);
-  function renderList(){
-    els.groupsList.innerHTML='';
-    if(!t.groups.length){ const p=document.createElement('div'); p.className='muted'; p.textContent='Папок пока нет'; els.groupsList.append(p); }
-    for(const g of t.groups){
-      const row=document.createElement('div'); row.style.cssText='display:flex;gap:8px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:8px 10px;';
-      const name=document.createElement('div'); name.textContent=g.title; name.style.fontWeight='600';
-      const del=ghost('🗑️', ()=>{ const used=(t.items||[]).some(it=>it.groupId===g.id); if(used){ alert('Нельзя удалить: есть подзадачи в этой папке.'); return; } t.groups=t.groups.filter(x=>x.id!==g.id); save(); renderList(); renderChecklist(t); });
-      row.append(name, del); els.groupsList.append(row);
-    }
-  }
-  renderList();
-  els.addGroupBtn.onclick = ()=>{ const v=(els.newGroupName.value||'').trim(); if(!v) return; t.groups.push({id:uid(), title:v}); els.newGroupName.value=''; save(); renderList(); };
-  els.groupManageClose.onclick = ()=>{ cleanup(); };
-}
-function assignGroup(taskId, itemId){
-  const t=tasks.find(x=>x.id===taskId); if(!t) return;
-  const it=(t.items||[]).find(i=>i.id===itemId); if(!it) return;
-  if(!Array.isArray(t.groups) || t.groups.length===0){ alert('Сначала создайте папку через кнопку «Группы».'); return; }
-  if(!els.groupAssignModal){ alert('UI назначения папки недоступен'); return; }
-  els.groupAssignModal.style.display='flex';
-  function cleanup(){ els.groupAssignModal.style.display='none'; els.assignCancel.onclick=null; els.assignClear.onclick=null; document.removeEventListener('keydown',onKey); }
-  function onKey(e){ if(e.key==='Escape') cleanup(); }
-  document.addEventListener('keydown', onKey);
-  els.assignGroupList.innerHTML='';
-  for(const g of t.groups){
-    const btn=document.createElement('button'); btn.className='ghost'; btn.style.textAlign='left'; btn.textContent='📁 ' + g.title;
-    btn.onclick=(e)=>{ e.preventDefault(); it.groupId=g.id; save(); cleanup(); renderChecklist(t); };
-    els.assignGroupList.append(btn);
-  }
-  els.assignCancel.onclick = (e)=>{ e.preventDefault(); cleanup(); };
-  els.assignClear.onclick = (e)=>{ e.preventDefault(); it.groupId=null; save(); cleanup(); renderChecklist(t); };
-}
+// Debug error overlay
+window.__showErrorOverlay=function(msg){try{var el=document.getElementById('errorOverlay');var pre=document.getElementById('errorText');if(el&&pre){pre.textContent=String(msg||'Unknown');el.style.display='block';}}catch(e){}}
+window.addEventListener('error',e=>__showErrorOverlay((e&&e.error&&e.error.stack)||e.message||e.toString()));
+window.addEventListener('unhandledrejection',e=>__showErrorOverlay((e&&e.reason&&(e.reason.stack||e.reason.message))||'Unhandled rejection'));
+(function(){var b=document.getElementById('diagBanner'); if(b) b.textContent += ' • JS loaded';})();

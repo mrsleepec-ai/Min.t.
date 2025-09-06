@@ -66,6 +66,12 @@
     #pdfViewer header .ghost{background:transparent;border:1px solid var(--line);color:#e6eefc}
     #pdfViewer iframe{flex:1;border:0;width:100%;background:#fff}
         
+/* Error overlay */
+#errorOverlay{position:fixed;inset:0;display:none;background:rgba(11,18,32,.92);color:#fff;z-index:10000;padding:16px;overflow:auto}
+#errorOverlay .box{max-width:800px;margin:40px auto;background:#0b1220;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px}
+#errorOverlay h3{margin:0 0 8px;font-size:18px}
+#errorOverlay pre{white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.35}
+
 /* Groups (folders) for checklist */
 #checkList li.group-header{list-style:none;margin:8px 0 4px;padding:4px 0 0 0;font-weight:700;opacity:.9;border:none}
 #checkList li.group-empty{list-style:none;margin:0 0 8px;color:var(--muted);opacity:.8}
@@ -73,6 +79,7 @@
 </head>
 <body>
 <script>/* unregister all sw */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(rs=>{rs.forEach(r=>r.unregister()); caches&&caches.keys&&caches.keys().then(keys=>keys.forEach(k=>caches.delete(k)));});}</script>
+<div id="errorOverlay"><div class="box"><h3>JS Error</h3><pre id="errorText"></pre></div></div>
   <header><h1 id="appTitle">Mint</h1></header>
   <main>
 <div id="updateBar"><div class="inner">Доступна новая версия <button id="updateNowBtn">Обновить</button></div></div>
@@ -218,6 +225,6 @@
 
   <div id="orientationLock"><div class="box"><h2>Поверните устройство</h2><p>Приложение работает только в портретной ориентации.</p></div></div>
 <script src="app.v60.js"></script>
-<div id="diagBanner" style="position:fixed;left:8px;bottom:8px;background:#0b1220;color:#e6eefc;border:1px solid rgba(255,255,255,.15);padding:6px 10px;border-radius:10px;opacity:.9;z-index:9999;font-size:12px">Debug: groups-lite-nosw</div>
+<div id="diagBanner" style="position:fixed;left:8px;bottom:8px;background:#0b1220;color:#e6eefc;border:1px solid rgba(255,255,255,.15);padding:6px 10px;border-radius:10px;opacity:.9;z-index:9999;font-size:12px">Debug: groups-debug</div>
 </body>
 </html>
