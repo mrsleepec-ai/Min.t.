@@ -3,27 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<title>Mint</title>
+<title>Mint • Folders Reset</title>
 <style>
-:root{
-  --bg:#eef1f6; --fg:#0b1220; --muted:#6e7b8f;
-  --brand:#0ea5e9; --card:#ffffff; --line:#e4e7ee;
-  --radius:16px;
-}
+:root{--bg:#eef1f6;--fg:#0b1220;--muted:#6e7b8f;--brand:#0ea5e9;--line:#e4e7ee;--card:#fff}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
-header{position:sticky;top:0;background:linear-gradient(180deg,#0ea5e9,#0ca6e9);color:#fff;padding:18px 20px 14px;z-index:10}
-h1{margin:0;font-size:22px;font-weight:800;letter-spacing:.2px;text-shadow:0 1px 0 rgba(0,0,0,.12)}
-main{padding:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 5px 18px rgba(17,24,39,.06);padding:14px}
-.inputrow{display:flex;gap:10px;margin:6px 0 10px}
-input[type=text]{flex:1;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#f8fafc;color:var(--fg);outline:none}
+header{position:sticky;top:0;background:linear-gradient(180deg,#0ea5e9,#0ca6e9);color:#fff;padding:16px 18px 12px}
+h1{margin:0;font-size:20px;font-weight:800}
+main{padding:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 5px 18px rgba(17,24,39,.06);padding:14px}
+.inputrow{display:flex;gap:10px;margin-bottom:10px}
+input[type=text]{flex:1;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#f8fafc;color:#0b1220}
 button{border:0;border-radius:12px;padding:10px 14px;background:var(--brand);color:#fff;font-weight:600}
-button.ghost{background:transparent;border:1px solid var(--line);color:var(--fg)}
+button.ghost{background:transparent;border:1px solid var(--line);color:#0b1220}
 .tabs{display:flex;gap:10px;margin:6px 0 12px}
 .tab{padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#f8fafc}
 .list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
@@ -31,30 +23,25 @@ button.ghost{background:transparent;border:1px solid var(--line);color:var(--fg)
 .row .title{font-weight:600}
 .row .actions{display:flex;gap:8px}
 a.row-link{position:absolute;inset:0;opacity:0}
-header small{opacity:.9;font-weight:600}
-.badge{display:inline-flex;align-items:center;gap:6px;background:#0b1220;color:#e6eefc;border:1px solid rgba(255,255,255,.15);padding:4px 8px;border-radius:10px;position:fixed;left:8px;bottom:8px;opacity:.85;z-index:20;font-size:12px}
 /* Group headers */
 #checkList li.group-header{list-style:none;margin:10px 0 4px;padding:2px 2px;font-weight:800;color:#223049;opacity:.9;border:none;background:transparent}
 #checkList li.group-empty{list-style:none;margin:0 0 8px;color:var(--muted);opacity:.85}
-/* Modal */
 .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:50}
 .modal .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;max-width:440px;width:92%;display:grid;gap:12px}
-.minirow{display:flex;gap:8px}
 .note{width:100%;min-height:120px;padding:12px;border:1px solid var(--line);border-radius:10px}
 .gallery{display:flex;gap:8px;flex-wrap:wrap}
 .gallery img{width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
-.footer-space{height:22px}
+.badge{position:fixed;left:8px;bottom:8px;background:#0b1220;color:#e6eefc;border:1px solid rgba(255,255,255,.15);padding:4px 8px;border-radius:10px;opacity:.9;z-index:99;font-size:12px}
 .hidden{display:none}
 </style>
 </head>
 <body>
-<header><h1>Mint <small id="ver">vNEW</small></h1></header>
+<header><h1>Mint <small>folders-reset</small></h1></header>
 <main>
-  <!-- HOME -->
-  <section id="view-home" class="card">
+  <section id="home" class="card">
     <div class="inputrow">
-      <input id="newTaskInput" type="text" maxlength="120" placeholder="Новая задача…">
-      <button id="addTaskBtn">Добавить</button>
+      <input id="taskInput" type="text" maxlength="120" placeholder="Новая задача…">
+      <button type="button" id="taskAdd">Добавить</button>
     </div>
     <div class="tabs">
       <div class="tab" data-tab="all">Все</div>
@@ -65,77 +52,71 @@ header small{opacity:.9;font-weight:600}
     <div id="emptyHome" class="muted">Список пуст.</div>
   </section>
 
-  <!-- TASK (Checklist) -->
-  <section id="view-task" class="card hidden">
-    <div class="minirow" style="justify-content:space-between;align-items:center">
-      <div><button class="ghost" id="backHome">← Список</button></div>
+  <section id="task" class="card hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <button type="button" class="ghost" id="toHome">← Список</button>
       <div style="display:flex;gap:8px">
-        <button class="ghost" id="pdfBtn">📄 PDF</button>
-        <button class="ghost" id="foldersBtn">📁 Папки</button>
-        <button class="ghost" id="deleteTaskBtn">🗑️ Удалить</button>
+        <button type="button" class="ghost" id="taskPdf">📄 PDF</button>
+        <button type="button" class="ghost" id="taskFolders">📁 Папки</button>
+        <button type="button" class="ghost" id="taskDelete">🗑️ Удалить</button>
       </div>
     </div>
-    <h3 id="taskTitle" style="margin:8px 0 10px"></h3>
+    <h3 id="taskTitle" style="margin:4px 0 10px"></h3>
     <div class="inputrow">
-      <input id="newItemInput" type="text" maxlength="160" placeholder="Добавить пункт чек-листа…">
-      <button id="addItemBtn">Добавить</button>
+      <input id="itemInput" type="text" maxlength="160" placeholder="Добавить пункт…">
+      <button type="button" id="itemAdd">Добавить</button>
     </div>
     <ul id="checkList" class="list"></ul>
     <div id="emptyCheck" class="muted">Пока нет пунктов.</div>
   </section>
 
-  <!-- NOTE (subtask) -->
-  <section id="view-note" class="card hidden">
-    <div class="minirow" style="justify-content:space-between;align-items:center">
-      <div><button class="ghost" id="backTask">← Задача</button></div>
-      <div><button class="ghost" id="delItemBtn">🗑️ Удалить пункт</button></div>
+  <section id="note" class="card hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <button type="button" class="ghost" id="toTask">← Задача</button>
+      <button type="button" class="ghost" id="itemDelete">🗑️ Удалить пункт</button>
     </div>
-    <h3 id="noteTitle" style="margin:8px 0 8px"></h3>
+    <h3 id="noteTitle" style="margin:4px 0 8px"></h3>
     <textarea id="noteArea" class="note" placeholder="Примечание…"></textarea>
-    <div class="minirow">
+    <div style="display:flex;gap:8px;margin-top:8px">
       <input id="photoInput" type="file" accept="image/*" capture="environment" class="hidden">
-      <button id="addPhotoBtn" class="ghost">📎 Прикрепить фото</button>
-      <button id="clearPhotosBtn" class="ghost">Удалить фото</button>
+      <button type="button" id="addPhoto" class="ghost">📎 Прикрепить фото</button>
+      <button type="button" id="clearPhotos" class="ghost">Удалить фото</button>
     </div>
-    <div id="noteGallery" class="gallery"></div>
+    <div id="gallery" class="gallery"></div>
   </section>
-
-  <div class="footer-space"></div>
 </main>
-
-<!-- PDF option modal -->
-<div id="pdfModal" class="modal">
-  <div class="box">
-    <div style="font-weight:700">Экспорт в PDF</div>
-    <div class="minirow">
-      <button id="pdfChecklist" class="">Чек‑лист</button>
-      <button id="pdfDescription" class="ghost">Описание</button>
-    </div>
-    <div id="daysRow" class="minirow hidden">
-      <input id="daysCount" type="number" min="1" max="60" value="7" style="width:120px">
-      <div class="muted" style="padding-top:10px">дней</div>
-    </div>
-    <div class="minirow" style="justify-content:flex-end">
-      <button id="pdfClose" class="ghost">Закрыть</button>
-    </div>
-  </div>
-</div>
 
 <!-- Folders modal -->
 <div id="foldersModal" class="modal">
   <div class="box">
     <div style="font-weight:700">Папки подзадач</div>
-    <div class="minirow">
-      <input id="folderName" type="text" placeholder="Новая папка…" maxlength="60">
-      <button id="addFolderBtn">Добавить</button>
+    <div style="display:flex;gap:8px">
+      <input id="folderInput" type="text" placeholder="Новая папка…" maxlength="60" style="flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:10px">
+      <button type="button" id="folderAdd">Добавить</button>
     </div>
-    <div id="foldersList"></div>
-    <div class="minirow" style="justify-content:flex-end">
-      <button id="foldersClose" class="ghost">Готово</button>
-    </div>
+    <div id="foldersList" style="display:grid;gap:8px"></div>
+    <div style="display:flex;justify-content:flex-end"><button type="button" id="foldersClose" class="ghost">Готово</button></div>
   </div>
 </div>
 
-<script src="app.js" defer></script>
+<!-- PDF modal -->
+<div id="pdfModal" class="modal">
+  <div class="box">
+    <div style="font-weight:700">Экспорт в PDF</div>
+    <div style="display:flex;gap:8px">
+      <button type="button" id="pdfChecklist">Чек‑лист</button>
+      <button type="button" id="pdfDescription" class="ghost">Описание</button>
+    </div>
+    <div id="daysRow" style="display:none;gap:8px;align-items:center">
+      <input id="daysCount" type="number" min="1" max="60" value="7" style="width:120px;padding:8px 10px;border:1px solid var(--line);border-radius:10px">
+      <div class="muted">дней</div>
+    </div>
+    <div style="display:flex;justify-content:flex-end"><button type="button" id="pdfClose" class="ghost">Закрыть</button></div>
+  </div>
+</div>
+
+<div id="badge" class="badge">Boot: HTML</div>
+
+<script src="app.js"></script>
 </body>
 </html>
