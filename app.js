@@ -402,8 +402,6 @@ function openPdfDialog(taskId) {
   const task = tasks.find(t => t.id === taskId);
   if (!task) return;
 
-  const type = prompt('PDF: 1 — Чек‑лист, 2 — Описание', '1');
-  if (type && type.trim() === '2') { await exportDescriptionPDF(task); return; }
   const daysStr = prompt('Сколько дней (колонки дат) добавить?', '7');
   if (daysStr === null) return;
   const days = Math.max(1, Math.min(365, parseInt(daysStr || '7', 10)));
@@ -547,7 +545,6 @@ async function blobToDataURL(blob){
 }
 
 async function exportDescriptionPDF(task){
-  // Build sections with notes and photos
   const items = task.items || [];
   const sections = [];
   for (const [idx, it] of items.entries()){
@@ -560,7 +557,6 @@ async function exportDescriptionPDF(task){
     }
     sections.push({ idx: idx+1, title: it.title || '', note: it.note || '', photos });
   }
-
   let html = `<!doctype html>
 <html lang="ru"><head><meta charset="utf-8">
 <title>${task.title} — описание</title>
@@ -582,7 +578,6 @@ async function exportDescriptionPDF(task){
   </div>
   <h1>${task.title}</h1>
 `;
-
   for (const s of sections){
     html += `<div class="section">
       <div class="meta"><div>№ ${s.idx}</div><div></div></div>
@@ -591,9 +586,15 @@ async function exportDescriptionPDF(task){
       ${s.photos && s.photos.length ? `<div class="photos">` + s.photos.map(u=>`<img src="${u}">`).join('') + `</div>` : ''}
     </div>`;
   }
-
   html += `</body></html>`;
-
   const win = window.open('', '_blank');
   win.document.open(); win.document.write(html); win.document.close();
+}
+
+async function exportPDF(task){
+  try{
+    const type = prompt('PDF: 1 — Чек‑лист, 2 — Описание', '1');
+    if (type && type.trim() === '2') { await exportDescriptionPDF(task); return; }
+    await exportChecklistPDF(task);
+  } catch(e){ alert('Не удалось сформировать PDF: ' + e); }
 }
