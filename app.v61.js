@@ -162,7 +162,7 @@ function showDetail(taskId){
 }
 
 
-function renderChecklist(t){
+function renderChecklist(t){ try{
   const items = t.items || [];
   els.checkList.innerHTML=''; els.emptyCheck.hidden = items.length>0;
   const groups = Array.isArray(t.groups) ? t.groups : [];
@@ -202,6 +202,7 @@ function renderChecklist(t){
     for(const it of un){ els.checkList.append(itemRow(it)); }
   }
   if (window.MT_afterRenderChecklist) try{ window.MT_afterRenderChecklist(t); }catch(e){}
+  }catch(e){ console.error('renderChecklist error, using flat', e); try{ renderChecklist_flat(t); }catch(_){} }
 }
 );
     const title=document.createElement('div'); title.className='title'; title.textContent=it.title;
@@ -545,7 +546,7 @@ function showChecklistParams(task){
 })();
 
 
-function openGroupManage(taskId){
+function openGroupManage(taskId){ try{ if(!els.groupManageModal){ alert('UI папок недоступен'); return; }
   const t = tasks.find(x=>x.id===taskId); if(!t) return;
   if(!Array.isArray(t.groups)) t.groups=[];
   if(!els.groupManageModal){ alert('UI для папок недоступен'); return; }
@@ -573,9 +574,10 @@ function openGroupManage(taskId){
     t.groups.push({id:uid(), title:v}); els.newGroupName.value=''; save(); renderList();
   };
   els.groupManageClose.onclick = ()=>{ cleanup(); };
+ }catch(e){ console.error('openGroupManage error', e);}
 }
 
-function assignGroup(taskId, itemId){
+function assignGroup(taskId, itemId){ try{ if(!els.groupAssignModal){ alert('UI папок недоступен'); return; }
   const t=tasks.find(x=>x.id===taskId); if(!t) return;
   const it=(t.items||[]).find(i=>i.id===itemId); if(!it) return;
   if(!Array.isArray(t.groups) || t.groups.length===0){ alert('Сначала создайте папку через кнопку «Группы».'); return; }
@@ -592,4 +594,28 @@ function assignGroup(taskId, itemId){
   }
   els.assignCancel.onclick = (e)=>{ e.preventDefault(); cleanup(); };
   els.assignClear.onclick = (e)=>{ e.preventDefault(); it.groupId=null; save(); cleanup(); renderChecklist(t); };
+ }catch(e){ console.error('assignGroup error', e);}
+}
+
+
+function renderChecklist_flat(t){
+  const items = t.items || [];
+  els.checkList.innerHTML=''; els.emptyCheck.hidden = items.length>0;
+  for(const it of items){
+    const li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!it.done;
+    cb.addEventListener('change', e=>{ e.preventDefault(); e.stopPropagation(); it.done=cb.checked; const allDone=(t.items||[]).length>0 && (t.items||[]).every(x=>x.done); t.done=allDone; save(); setTabLabels(); });
+    const title=document.createElement('div'); title.className='title'; title.textContent=it.title;
+    const actions=document.createElement('div'); actions.className='actions';
+    const attachBtn=ghost('📎', ()=> attachPhoto(t.id, it.id));
+    const editBtn=ghost('✏️', ()=> editItem(t.id, it.id));
+    const delBtn=ghost('🗑️', ()=> removeItem(t.id, it.id));
+    actions.append(attachBtn, editBtn, delBtn);
+    actions.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); });
+    const link=document.createElement('a'); link.className='row-link'; link.href='#/note/'+t.id+'/'+it.id;
+    li.append(cb,title,actions,link);
+    els.checkList.append(li);
+  }
+  if (window.MT_afterRenderChecklist) try{ window.MT_afterRenderChecklist(t); }catch(e){}
+  }catch(e){ console.error('renderChecklist error, using flat', e); try{ renderChecklist_flat(t); }catch(_){} }
 }
