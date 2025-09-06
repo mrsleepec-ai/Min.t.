@@ -224,7 +224,28 @@
   </div>
 
   <div id="orientationLock"><div class="box"><h2>Поверните устройство</h2><p>Приложение работает только в портретной ориентации.</p></div></div>
-<script src="app.v60.js"></script>
+
 <div id="diagBanner" style="position:fixed;left:8px;bottom:8px;background:#0b1220;color:#e6eefc;border:1px solid rgba(255,255,255,.15);padding:6px 10px;border-radius:10px;opacity:.9;z-index:9999;font-size:12px">Debug: groups-debug</div>
+
+<script>
+// dynamic syntax-debug loader
+(function(){
+  var overlay = document.getElementById('errorOverlay');
+  var pre = document.getElementById('errorText');
+  function show(msg){ if(overlay&&pre){ pre.textContent=msg; overlay.style.display='block'; } }
+  var url = 'app.v60.js?sd=1757198553';
+  fetch(url).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.text(); })
+  .then(function(code){ 
+      try {
+        new Function(code)(); // catches SyntaxError too
+        // indicate executed
+        var b=document.getElementById('diagBanner'); if(b) b.textContent += ' • JS eval ok';
+      } catch(e) {
+        show('Syntax/boot error in app.v60.js:\n'+(e.stack||e.message||e)); 
+      }
+  }).catch(function(err){ show('Failed to load app.v60.js: '+err); });
+})();
+</script>
+
 </body>
 </html>
