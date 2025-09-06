@@ -58,9 +58,13 @@ const els = {
 
 function save() { localStorage.setItem(storeKey, JSON.stringify(tasks)); }
 function showConfirm(message, onOk){
+  // focus-safe modal
+
   els.confirmText.textContent = message;
   els.confirmModal.style.display = 'flex';
-  function cleanup(){ els.confirmModal.style.display='none'; els.confirmOk.onclick=null; els.confirmCancel.onclick=null; }
+  function cleanup(){ els.confirmModal.style.display='none'; els.confirmOk.onclick=null; els.confirmCancel.onclick=null; document.removeEventListener('keydown', onKey); }
+  function onKey(ev){ if(ev.key==='Escape'){ cleanup(); } }
+  document.addEventListener('keydown', onKey);
   els.confirmCancel.onclick = ()=> cleanup();
   els.confirmOk.onclick = ()=>{ cleanup(); onOk(); };
 }
@@ -129,10 +133,10 @@ function showList() {
     els.list.append(li);
   }
 }
-function ghost(text, onClick) {
+function ghost(text, onClick) { /*wrapped*/
   const btn = document.createElement('button');
   btn.className = 'ghost'; btn.type = 'button'; btn.textContent = text;
-  btn.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
+  btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); onClick(); });
   return btn;
 }
 function addTask(title) {

@@ -111,6 +111,14 @@
       /* Full-row overlay link for reliable tap navigation in subtask rows */
       .check li { position: relative; }
       .row-link { position:absolute; inset:0; border-radius:12px; color:inherit; text-decoration:none; }
+        
+      /* Controls above overlay */
+      .check li { position: relative; }
+      .check li .actions, .check li input[type="checkbox"] { position: relative; z-index: 3; }
+      /* For task list rows too */
+      ul.tasks li { position: relative; }
+      ul.tasks li .actions { position: relative; z-index: 3; }
+      .row-link { z-index: 1; }
         </style>
   </head>
   <body>
