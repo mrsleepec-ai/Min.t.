@@ -1,8 +1,8 @@
-// Minimal Tasks v38
-const storeKey='minimal_tasks_v38';
+// Minimal Tasks v41
+const storeKey='minimal_tasks_v41';
 let tasks=[];
 try{ tasks=JSON.parse(localStorage.getItem(storeKey)||'[]'); }catch{ tasks=[]; }
-for(const t of tasks){ if(!Array.isArray(t.items)) t.items=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; } }
+for(const t of tasks){ if(typeof t.done!=='boolean') t.done=false; if(!Array.isArray(t.items)) t.items=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; } }
 
 const els={
   appTitle: document.getElementById('appTitle'),
@@ -14,6 +14,9 @@ const els={
   taskTitle: document.getElementById('taskTitle'),
   tasks: document.getElementById('tasks'),
   tasksEmpty: document.getElementById('tasksEmpty'),
+  tabActive: document.getElementById('tabActive'),
+  tabDone: document.getElementById('tabDone'),
+  tabAll: document.getElementById('tabAll'),
   // detail
   taskHeader: document.getElementById('taskHeader'),
   pdfBtn: document.getElementById('pdfBtn'),
@@ -73,13 +76,34 @@ function showConfirm(message, onOk){
 // Helpers
 function ghost(text, onClick){ const b=document.createElement('button'); b.className='ghost'; b.textContent=text; b.addEventListener('click',e=>{ e.preventDefault(); e.stopPropagation(); onClick(); }); return b; }
 
+let currentTaskId=null; let taskFilter = localStorage.getItem('mt_filter') || 'active';
+
+function setTabLabels(){
+  if(!els.tabActive || !els.tabDone || !els.tabAll) return;
+  const total = tasks.length;
+  const done = tasks.filter(t=>!!t.done).length;
+  const active = total - done;
+  els.tabActive.textContent = `Активные (${active})`;
+  els.tabDone.textContent = `Выполненные (${done})`;
+  els.tabAll.textContent = `Все (${total})`;
+}
+
 // List
 function showTasks(){
-  els.viewList.hidden=false; els.appTitle.textContent='Minimal Tasks v38';
-  els.tasks.innerHTML=''; els.tasksEmpty.hidden = tasks.length>0;
-  for(const t of tasks){
+  els.viewList.hidden=false; els.appTitle.textContent='Minimal Tasks v41'; setTabLabels();
+  // tabs
+  if(els.tabActive){ els.tabActive.classList.toggle('active', taskFilter==='active'); els.tabActive.onclick=()=>{ taskFilter='active'; localStorage.setItem('mt_filter', taskFilter); showTasks(); }; }
+  if(els.tabDone){ els.tabDone.classList.toggle('active', taskFilter==='done'); els.tabDone.onclick=()=>{ taskFilter='done'; localStorage.setItem('mt_filter', taskFilter); showTasks(); }; }
+  if(els.tabAll){ els.tabAll.classList.toggle('active', taskFilter==='all'); els.tabAll.onclick=()=>{ taskFilter='all'; localStorage.setItem('mt_filter', taskFilter); showTasks(); }; }
+
+  els.tasks.innerHTML='';
+  const filtered = tasks.filter(t => taskFilter==='all' ? true : (taskFilter==='done'? !!t.done : !t.done));
+  els.tasksEmpty.hidden = filtered.length>0;
+
+  for(const t of filtered){
     const li=document.createElement('li'); li.className='row';
-    const cb=document.createElement('input'); cb.type='checkbox'; cb.style.visibility='hidden';
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!t.done;
+    cb.addEventListener('change', e=>{ e.preventDefault(); e.stopPropagation(); t.done=cb.checked; save(); setTabLabels(); showTasks(); });
     const title=document.createElement('div'); title.className='title'; title.textContent=t.title;
     const actions=document.createElement('div'); actions.className='actions';
     const pdfBtn=ghost('PDF', ()=> showPdfChoice(t));
@@ -91,7 +115,8 @@ function showTasks(){
     li.append(cb,title,actions,link);
     els.tasks.append(li);
   }
-  els.addTask.onsubmit = (e)=>{ e.preventDefault(); const v=els.taskTitle.value.trim(); if(!v) return; tasks.push({id:uid(), title:v, items:[]}); save(); els.taskTitle.value=''; showTasks(); };
+
+  els.addTask.onsubmit = (e)=>{ e.preventDefault(); const v=els.taskTitle.value.trim(); if(!v) return; tasks.push({id:uid(), title:v, done:false, items:[]}); save(); setTabLabels(); els.taskTitle.value=''; showTasks(); };
 }
 function renameTask(id){
   const t=tasks.find(x=>x.id===id); if(!t) return;
@@ -99,11 +124,10 @@ function renameTask(id){
   t.title=v.trim()||t.title; save(); showTasks();
 }
 function removeTask(id){
-  showConfirm('Удалить задачу?', ()=>{ tasks = tasks.filter(t=>t.id!==id); save(); showTasks(); });
+  showConfirm('Удалить задачу?', ()=>{ tasks = tasks.filter(t=>t.id!==id); save(); setTabLabels(); showTasks(); });
 }
 
 // Detail
-let currentTaskId=null;
 function showDetail(taskId){
   const t=tasks.find(x=>x.id===taskId); if(!t){ location.hash='#/'; return; }
   currentTaskId=taskId;
@@ -115,7 +139,7 @@ function showDetail(taskId){
 
   renderChecklist(t);
 
-  els.addSub.onsubmit=(e)=>{ e.preventDefault(); const v=els.subTitle.value.trim(); if(!v) return; (t.items ||= []).push({id:uid(), title:v, done:false, note:'', notePhotoKeys:[]}); save(); els.subTitle.value=''; renderChecklist(t); };
+  els.addSub.onsubmit=(e)=>{ e.preventDefault(); const v=els.subTitle.value.trim(); if(!v) return; (t.items ||= []).push({id:uid(), title:v, done:false, note:'', notePhotoKeys:[]}); t.done=false; save(); setTabLabels(); els.subTitle.value=''; renderChecklist(t); };
 }
 
 function renderChecklist(t){
@@ -124,7 +148,8 @@ function renderChecklist(t){
   for(const it of items){
     const li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
     const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!it.done;
-    cb.addEventListener('change', e=>{ e.preventDefault(); e.stopPropagation(); it.done=cb.checked; save(); });
+    cb.addEventListener('change', e=>{ e.preventDefault(); e.stopPropagation(); it.done=cb.checked; // auto mark task
+      const allDone=(t.items||[]).length>0 && (t.items||[]).every(x=>x.done); t.done=allDone; save(); setTabLabels(); });
     const title=document.createElement('div'); title.className='title'; title.textContent=it.title;
     const actions=document.createElement('div'); actions.className='actions';
     const attachBtn=ghost('📎', ()=> attachPhoto(t.id, it.id));
@@ -146,7 +171,9 @@ function editItem(taskId, itemId){
 function removeItem(taskId, itemId){
   showConfirm('Удалить подзадачу?', ()=>{
     const t=tasks.find(x=>x.id===taskId); if(!t) return;
-    t.items=(t.items||[]).filter(s=>s.id!==itemId); save(); renderChecklist(t);
+    t.items=(t.items||[]).filter(s=>s.id!==itemId);
+    t.done = (t.items||[]).length>0 ? (t.items||[]).every(x=>x.done) : t.done;
+    save(); setTabLabels(); renderChecklist(t);
   });
 }
 
@@ -181,17 +208,14 @@ async function renderNotePhotos(it){
 }
 
 function attachPhoto(taskId, itemId){
-  // redirect to notes and open chooser
   location.hash = '#/note/'+taskId+'/'+itemId;
   setTimeout(()=>{ els.noteAttachBtn?.click(); }, 100);
 }
 
-// Lightbox
 function openLightbox(url){
   const w=window.open('','_blank'); w.document.write('<img src="'+url+'" style="max-width:100%;height:auto">');
 }
 
-// Image compression -> DataURL
 function compressImageToDataURL(file, maxSize, quality){
   return new Promise((resolve,reject)=>{
     const img=new Image(); const r=new FileReader();
@@ -205,7 +229,6 @@ function compressImageToDataURL(file, maxSize, quality){
   });
 }
 
-// IndexedDB for photos
 const DB_NAME='mtasks'; const DB_VER=1;
 let dbPromise=null;
 function openDB(){ if(!('indexedDB' in window)) return null; if(dbPromise) return dbPromise;
@@ -229,9 +252,9 @@ async function attachPhotoToNote(taskId,itemId,file){
   if(!els.viewNote.hidden) renderNotePhotos(it);
 }
 
-// PDF: description exporter (fresh data per run)
+// PDF: description exporter
 async function blobToDataURL(blob){ return await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); }); }
-async function exportDescriptionPDF(task, preopenWin){
+async function exportDescriptionPDF(task){
   const items=task.items||[]; const sections=[];
   for(const [idx,it] of items.entries()){
     const photos=[];
@@ -255,11 +278,11 @@ async function exportDescriptionPDF(task, preopenWin){
     </div>`;
   }
   html += `</body></html>`;
-  const win = preopenWin || window.open('', '_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; } win.document.open(); win.document.write(html); win.document.close();
+  const win=window.open('','_blank'); win.document.open(); win.document.write(html); win.document.close();
 }
 
-// PDF: checklist exporter
-async function exportChecklistPDF(task){
+// PDF: checklist exporter (pre-open window will be used from caller)
+async function exportChecklistPDF(task, preopenWin){
   const daysStr = prompt('Сколько дней (колонки дат) добавить?', '7');
   const days = Math.max(1, parseInt(daysStr||'7',10)||7);
   const extraStr = prompt('Сколько добавить пустых строк? (0 = не добавлять)', '0');
@@ -276,22 +299,17 @@ async function exportChecklistPDF(task){
   html += `<table><colgroup><col style="width:28pt" /><col />${dates.map(_=>'<col style="width:32pt" />').join('')}</colgroup><thead><tr><th>№</th><th>Пункт</th>${dates.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>`;
   rows.forEach((it,idx)=>{ html += `<tr><td class="n">${idx+1}</td><td class="t">${(it.title||'').replace(/</g,'&lt;')}</td>${dates.map(()=>'<td></td>').join('')}</tr>`; });
   html += `</tbody></table></body></html>`;
-  if(days>12){ html = html.replace('@page{size:auto;', '@page{size:A4 landscape;'); }
-  const win = preopenWin || window.open('', '_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; } win.document.open(); win.document.write(html); win.document.close();
+  const win = preopenWin || window.open('','_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; }
+  win.document.open(); win.document.write(html); win.document.close();
 }
 
-// PDF: clickable modal to choose type everywhere
+// PDF choice modal
 function showPdfChoice(task){
   els.pdfChoiceModal.style.display='flex';
   function cleanup(){ els.pdfChoiceModal.style.display='none'; els.optChecklist.onclick=null; els.optDescription.onclick=null; els.pdfChoiceCancel.onclick=null; document.removeEventListener('keydown',onKey); }
   function onKey(e){ if(e.key==='Escape') cleanup(); }
   document.addEventListener('keydown', onKey);
-  els.optChecklist.onclick = async (e)=>{ e.preventDefault(); cleanup(); await exportChecklistPDF(task); };
-  els.optDescription.onclick = async (e)=>{ e.preventDefault(); cleanup();
-    // Pre-open window to avoid popup blockers when async work (reading photos) takes time
-    const win = window.open('', '_blank');
-    if (!win) { alert('Разрешите всплывающие окна для экспорта PDF.'); return; }
-    await exportDescriptionPDF(task, win);
-  };
+  els.optChecklist.onclick = async (e)=>{ e.preventDefault(); cleanup(); const win=window.open('','_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; } await exportChecklistPDF(task, win); };
+  els.optDescription.onclick = async (e)=>{ e.preventDefault(); cleanup(); const win=window.open('','_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; } await exportDescriptionPDF(task); /* description opens its own */ };
   els.pdfChoiceCancel.onclick = (e)=>{ e.preventDefault(); cleanup(); };
 }

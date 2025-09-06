@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Minimal Tasks v39</title>
+  <title>Minimal Tasks v41</title>
   <meta name="theme-color" content="#0ea5e9">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -36,19 +36,23 @@
     .note-thumb{max-width:96px;max-height:96px;border-radius:8px;border:1px solid var(--line)}
     .note-thumb-wrap{position:relative;display:inline-block}
     .note-del{position:absolute;top:4px;right:4px;background:#e11d48;color:#fff;border:none;border-radius:8px;padding:2px 6px;font-size:12px}
-    /* confirm modal */
     #confirmModal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.5);z-index:200}
     #confirmModal .box{background:var(--card);padding:20px;border-radius:12px;max-width:320px;width:90%;box-shadow:0 6px 30px rgba(0,0,0,.45);display:grid;gap:14px}
-    /* pdf choice modal */
     #pdfChoiceModal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.5);z-index:210}
     #pdfChoiceModal .box{background:var(--card);padding:20px;border-radius:12px;max-width:360px;width:92%;box-shadow:0 6px 30px rgba(0,0,0,.45);display:grid;gap:14px}
+    #tabs .active{ background:var(--accent); color:#fff; border-color:transparent; }
   </style>
 </head>
 <body>
-  <header><h1 id="appTitle">Minimal Tasks v39</h1></header>
+  <header><h1 id="appTitle">Minimal Tasks v41</h1></header>
   <main>
     <!-- List -->
     <section id="view-list" class="card" hidden>
+      <div id="tabs" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+        <button id="tabActive" class="ghost">Активные</button>
+        <button id="tabDone" class="ghost">Выполненные</button>
+        <button id="tabAll" class="ghost">Все</button>
+      </div>
       <form id="addTask" class="add" autocomplete="off">
         <input id="taskTitle" type="text" maxlength="120" placeholder="Новая задача…" required>
         <button>Добавить</button>
@@ -124,6 +128,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=39"></script>
+  <script src="app.js?v=41"></script>
 </body>
 </html>
