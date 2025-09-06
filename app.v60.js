@@ -111,8 +111,14 @@ function showTasks(){
   for(const t of filtered){
     const li=document.createElement('li'); li.className='row';
     const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!t.done;
-    cb.addEventListener('change', e=>{ e.preventDefault(); e.stopPropagation(); t.done=cb.checked; save(); setTabLabels(); showTasks(); });
-    const title=document.createElement('div'); title.className='title'; title.textContent=t.title;
+    cb.addEventListener('change', e=>{ e.preventDefault(); e.stopPropagation();
+        // update source item (not the grouped copy)
+        const orig = (t.items||[]).find(x=>x.id===it.id);
+        if (orig) orig.done = cb.checked;
+        const allDone=(t.items||[]).length>0 && (t.items||[]).every(x=>x.done);
+        t.done=allDone; save(); setTabLabels();
+      });
+      const title=document.createElement('div'); title.className='title'; title.textContent=t.title;
     const actions=document.createElement('div'); actions.className='actions';
     const pdfBtn=ghost('PDF', ()=> showPdfChoice(t));
     const editBtn=ghost('✏️', ()=> renameTask(t.id));
