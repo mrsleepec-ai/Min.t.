@@ -231,7 +231,7 @@ async function attachPhotoToNote(taskId,itemId,file){
 
 // PDF: description exporter (fresh data per run)
 async function blobToDataURL(blob){ return await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); }); }
-async function exportDescriptionPDF(task){
+async function exportDescriptionPDF(task, preopenWin){
   const items=task.items||[]; const sections=[];
   for(const [idx,it] of items.entries()){
     const photos=[];
@@ -255,7 +255,7 @@ async function exportDescriptionPDF(task){
     </div>`;
   }
   html += `</body></html>`;
-  const win=window.open('','_blank'); win.document.open(); win.document.write(html); win.document.close();
+  const win = preopenWin || window.open('', '_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; } win.document.open(); win.document.write(html); win.document.close();
 }
 
 // PDF: checklist exporter
@@ -277,7 +277,7 @@ async function exportChecklistPDF(task){
   rows.forEach((it,idx)=>{ html += `<tr><td class="n">${idx+1}</td><td class="t">${(it.title||'').replace(/</g,'&lt;')}</td>${dates.map(()=>'<td></td>').join('')}</tr>`; });
   html += `</tbody></table></body></html>`;
   if(days>12){ html = html.replace('@page{size:auto;', '@page{size:A4 landscape;'); }
-  const win=window.open('','_blank'); win.document.open(); win.document.write(html); win.document.close();
+  const win = preopenWin || window.open('', '_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; } win.document.open(); win.document.write(html); win.document.close();
 }
 
 // PDF: clickable modal to choose type everywhere
@@ -287,6 +287,11 @@ function showPdfChoice(task){
   function onKey(e){ if(e.key==='Escape') cleanup(); }
   document.addEventListener('keydown', onKey);
   els.optChecklist.onclick = async (e)=>{ e.preventDefault(); cleanup(); await exportChecklistPDF(task); };
-  els.optDescription.onclick = async (e)=>{ e.preventDefault(); cleanup(); await exportDescriptionPDF(task); };
+  els.optDescription.onclick = async (e)=>{ e.preventDefault(); cleanup();
+    // Pre-open window to avoid popup blockers when async work (reading photos) takes time
+    const win = window.open('', '_blank');
+    if (!win) { alert('Разрешите всплывающие окна для экспорта PDF.'); return; }
+    await exportDescriptionPDF(task, win);
+  };
   els.pdfChoiceCancel.onclick = (e)=>{ e.preventDefault(); cleanup(); };
 }
