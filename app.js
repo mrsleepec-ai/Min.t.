@@ -96,7 +96,7 @@ function setTabLabels(){
 
 // List
 function showTasks(){
-  els.viewList.hidden=false; els.appTitle.textContent='Minimal Tasks v43'; setTabLabels();
+  els.viewList.hidden=false; els.appTitle.textContent='Minimal Tasks v44'; setTabLabels();
   // tabs
   if(els.tabActive){ els.tabActive.classList.toggle('active', taskFilter==='active'); els.tabActive.onclick=()=>{ taskFilter='active'; localStorage.setItem('mt_filter', taskFilter); showTasks(); }; }
   if(els.tabDone){ els.tabDone.classList.toggle('active', taskFilter==='done'); els.tabDone.onclick=()=>{ taskFilter='done'; localStorage.setItem('mt_filter', taskFilter); showTasks(); }; }
@@ -358,3 +358,5 @@ function showChecklistParams(task){
     await exportChecklistPDF(task, win, days, extra);
   };
 }
+
+window.addEventListener('DOMContentLoaded', ()=>{ try{route();}catch(e){console.error(e);} });
