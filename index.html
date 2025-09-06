@@ -92,7 +92,7 @@
       <div class="muted" id="taskHeader"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px;">
         <button id="pdfBtn" class="ghost">PDF</button>
-        <button id="renameTaskBtn" class="ghost">✏️ Переименовать</button>
+        <button id="groupsBtn" class="ghost">📁 Группы</button>
         <button id="deleteTaskBtn" class="ghost" style="border-color:#e11d48;color:#e11d48">🗑️ Удалить задачу</button>
       </div>
       <form id="addSub" class="add" autocomplete="off">
@@ -131,7 +131,36 @@
       </header>
       <iframe id="pdfFrame" title="Просмотр PDF/печати"></iframe>
     </div>
-    </main>
+    
+  <!-- Groups Manage Modal -->
+  <div id="groupManageModal" class="modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.5);z-index:230;">
+    <div class="modal-box" style="background:var(--card);padding:20px;border-radius:12px;max-width:420px;width:92%;display:grid;gap:12px;">
+      <div style="font-weight:700">Папки подзадач</div>
+      <div class="muted" style="font-size:13px">Создавайте папки, чтобы группировать подзадачи внутри этой задачи.</div>
+      <div style="display:flex;gap:8px;">
+        <input id="newGroupName" type="text" placeholder="Название папки" style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--fg)">
+        <button id="addGroupBtn">Добавить</button>
+      </div>
+      <div id="groupsList" style="display:grid;gap:8px;max-height:280px;overflow:auto;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button id="groupManageClose" class="ghost">Готово</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign to Group Modal -->
+  <div id="groupAssignModal" class="modal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.5);z-index:240;">
+    <div class="modal-box" style="background:var(--card);padding:20px;border-radius:12px;max-width:360px;width:92%;display:grid;gap:12px;">
+      <div style="font-weight:700">Назначить папку</div>
+      <div id="assignGroupList" style="display:grid;gap:8px;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button id="assignCancel" class="ghost">Отмена</button>
+        <button id="assignClear" class="ghost">Без папки</button>
+      </div>
+    </div>
+  </div>
+
+</main>
 
   <!-- Confirm modal -->
   <div id="confirmModal" class="modal">

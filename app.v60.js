@@ -2,7 +2,7 @@
 const storeKey='minimal_tasks_v45';
 let tasks=[];
 try{ tasks=JSON.parse(localStorage.getItem(storeKey)||'[]'); }catch{ tasks=[]; }
-for(const t of tasks){ if(typeof t.done!=='boolean') t.done=false; if(!Array.isArray(t.items)) t.items=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; } }
+for(const t of tasks){ if(typeof t.done!=='boolean') t.done=false; if(!Array.isArray(t.items)) t.items=[]; if(!Array.isArray(t.groups)) t.groups=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; if(typeof it.groupId==='undefined') it.groupId=null; } }
 
 const els={
   appTitle: document.getElementById('appTitle'),
@@ -51,6 +51,15 @@ const els={
   paramLandscape: document.getElementById('paramLandscape'),
   paramsCancel: document.getElementById('paramsCancel'),
   paramsCreate: document.getElementById('paramsCreate'),
+  groupManageModal: document.getElementById('groupManageModal'),
+  newGroupName: document.getElementById('newGroupName'),
+  addGroupBtn: document.getElementById('addGroupBtn'),
+  groupsList: document.getElementById('groupsList'),
+  groupManageClose: document.getElementById('groupManageClose'),
+  groupAssignModal: document.getElementById('groupAssignModal'),
+  assignGroupList: document.getElementById('assignGroupList'),
+  assignCancel: document.getElementById('assignCancel'),
+  assignClear: document.getElementById('assignClear'),
 };
 
 function save(){ localStorage.setItem(storeKey, JSON.stringify(tasks)); }
@@ -142,27 +151,64 @@ function showDetail(taskId){
   els.viewDetail.hidden=false; els.appTitle.textContent='Подзадачи';
   els.taskHeader.textContent=t.title;
   els.pdfBtn.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); showPdfChoice(t); };
-  els.renameTaskBtn.onclick=()=> renameTask(t.id);
+  els.groupsBtn.onclick=()=> openGroupManage(t.id);
   els.deleteTaskBtn.onclick=()=> removeTask(t.id);
 
   renderChecklist(t);
 
-  els.addSub.onsubmit=(e)=>{ e.preventDefault(); const v=els.subTitle.value.trim(); if(!v) return; (t.items ||= []).push({id:uid(), title:v, done:false, note:'', notePhotoKeys:[]}); t.done=false; save(); setTabLabels(); els.subTitle.value=''; renderChecklist(t); };
+  els.addSub.onsubmit=(e)=>{ e.preventDefault(); const v=els.subTitle.value.trim(); if(!v) return; (t.items ||= []).push({id:uid(), title:v, done:false, note:'', notePhotoKeys:[], groupId:null}); t.done=false; save(); setTabLabels(); els.subTitle.value=''; renderChecklist(t); };
 }
+
 
 function renderChecklist(t){
   const items = t.items || [];
   els.checkList.innerHTML=''; els.emptyCheck.hidden = items.length>0;
+  const groups = Array.isArray(t.groups) ? t.groups : [];
+  const byGroup = new Map();
   for(const it of items){
+    const key = it.groupId || 'ungrouped';
+    if(!byGroup.has(key)) byGroup.set(key, []);
+    byGroup.get(key).push(it);
+  }
+  function itemRow(it){
     const li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
     const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!it.done;
     cb.addEventListener('change', e=>{ e.preventDefault(); e.stopPropagation(); it.done=cb.checked; const allDone=(t.items||[]).length>0 && (t.items||[]).every(x=>x.done); t.done=allDone; save(); setTabLabels(); });
     const title=document.createElement('div'); title.className='title'; title.textContent=it.title;
     const actions=document.createElement('div'); actions.className='actions';
+    const folderBtn=ghost('📁', ()=> assignGroup(t.id, it.id));
     const attachBtn=ghost('📎', ()=> attachPhoto(t.id, it.id));
     const editBtn=ghost('✏️', ()=> editItem(t.id, it.id));
     const delBtn=ghost('🗑️', ()=> removeItem(t.id, it.id));
-    actions.append(attachBtn, editBtn, delBtn);
+    actions.append(folderBtn, attachBtn, editBtn, delBtn);
+    actions.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); });
+    const link=document.createElement('a'); link.className='row-link'; link.href='#/note/'+t.id+'/'+it.id;
+    li.append(cb,title,actions,link);
+    return li;
+  }
+  for(const g of groups){
+    const header=document.createElement('div'); header.textContent=g.title; header.style.cssText='font-weight:700;margin:8px 0 6px;opacity:.9';
+    els.checkList.append(header);
+    const list = byGroup.get(g.id) || [];
+    if(!list.length){ const empty=document.createElement('div'); empty.className='muted'; empty.style.margin='0 0 8px'; empty.textContent='(пусто)'; els.checkList.append(empty); }
+    for(const it of list){ els.checkList.append(itemRow(it)); }
+  }
+  const un = byGroup.get('ungrouped') || [];
+  if(un.length){
+    const head=document.createElement('div'); head.textContent='Без папки'; head.style.cssText='font-weight:700;margin:8px 0 6px;opacity:.7';
+    els.checkList.append(head);
+    for(const it of un){ els.checkList.append(itemRow(it)); }
+  }
+  if (window.MT_afterRenderChecklist) try{ window.MT_afterRenderChecklist(t); }catch(e){}
+}
+);
+    const title=document.createElement('div'); title.className='title'; title.textContent=it.title;
+    const actions=document.createElement('div'); actions.className='actions';
+    const folderBtn=ghost('📁', ()=> assignGroup(t.id, it.id));
+    const attachBtn=ghost('📎', ()=> attachPhoto(t.id, it.id));
+    const editBtn=ghost('✏️', ()=> editItem(t.id, it.id));
+    const delBtn=ghost('🗑️', ()=> removeItem(t.id, it.id));
+    actions.append(folderBtn, attachBtn, editBtn, delBtn);
     actions.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); });
     const link=document.createElement('a'); link.className='row-link'; link.href='#/note/'+t.id+'/'+it.id;
     li.append(cb,title,actions,link);
@@ -495,3 +541,51 @@ function showChecklistParams(task){
     };
   }
 })();
+
+
+function openGroupManage(taskId){
+  const t = tasks.find(x=>x.id===taskId); if(!t) return;
+  if(!Array.isArray(t.groups)) t.groups=[];
+  els.groupManageModal.style.display='flex';
+  function cleanup(){ els.groupManageModal.style.display='none'; els.addGroupBtn.onclick=null; els.groupManageClose.onclick=null; document.removeEventListener('keydown',onKey); }
+  function onKey(e){ if(e.key==='Escape') cleanup(); }
+  document.addEventListener('keydown', onKey);
+  function renderList(){
+    els.groupsList.innerHTML='';
+    if(!t.groups.length){ const p=document.createElement('div'); p.className='muted'; p.textContent='Папок пока нет'; els.groupsList.append(p); }
+    for(const g of t.groups){
+      const row=document.createElement('div'); row.style.cssText='display:flex;gap:8px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:10px;padding:8px 10px;';
+      const name=document.createElement('div'); name.textContent=g.title; name.style.fontWeight='600';
+      const del=ghost('🗑️', ()=>{
+        const used = (t.items||[]).some(it=>it.groupId===g.id);
+        if(used){ alert('Нельзя удалить: есть подзадачи в этой папке. Сначала уберите их из папки.'); return; }
+        t.groups = t.groups.filter(x=>x.id!==g.id); save(); renderList(); renderChecklist(t);
+      });
+      row.append(name, del); els.groupsList.append(row);
+    }
+  }
+  renderList();
+  els.addGroupBtn.onclick = ()=>{
+    const v = (els.newGroupName.value||'').trim(); if(!v) return;
+    t.groups.push({id:uid(), title:v}); els.newGroupName.value=''; save(); renderList();
+  };
+  els.groupManageClose.onclick = ()=>{ cleanup(); };
+}
+
+function assignGroup(taskId, itemId){
+  const t=tasks.find(x=>x.id===taskId); if(!t) return;
+  const it=(t.items||[]).find(i=>i.id===itemId); if(!it) return;
+  if(!Array.isArray(t.groups) || t.groups.length===0){ alert('Сначала создайте папку через кнопку «Группы».'); return; }
+  els.groupAssignModal.style.display='flex';
+  function cleanup(){ els.groupAssignModal.style.display='none'; els.assignCancel.onclick=null; els.assignClear.onclick=null; document.removeEventListener('keydown',onKey); }
+  function onKey(e){ if(e.key==='Escape') cleanup(); }
+  document.addEventListener('keydown', onKey);
+  els.assignGroupList.innerHTML='';
+  for(const g of t.groups){
+    const btn=document.createElement('button'); btn.className='ghost'; btn.style.textAlign='left'; btn.textContent='📁 ' + g.title;
+    btn.onclick=(e)=>{ e.preventDefault(); it.groupId=g.id; save(); cleanup(); renderChecklist(t); };
+    els.assignGroupList.append(btn);
+  }
+  els.assignCancel.onclick = (e)=>{ e.preventDefault(); cleanup(); };
+  els.assignClear.onclick = (e)=>{ e.preventDefault(); it.groupId=null; save(); cleanup(); renderChecklist(t); };
+}
