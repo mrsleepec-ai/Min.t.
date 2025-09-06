@@ -2,8 +2,8 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Minimal Tasks v45</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Minimal Tasks v47</title>
   <meta name="theme-color" content="#0ea5e9">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -39,10 +39,16 @@
     #confirmModal,#pdfChoiceModal,#checklistParamsModal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.5);z-index:210}
     .modal-box{background:var(--card);padding:20px;border-radius:12px;max-width:360px;width:92%;box-shadow:0 6px 30px rgba(0,0,0,.45);display:grid;gap:14px}
     #tabs .active{ background:var(--accent); color:#fff; border-color:transparent; }
-  </style>
+  
+    /* Portrait-only overlay */
+    #orientationLock{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0b1220;color:#e6eefc;z-index:9999;text-align:center;padding:24px}
+    #orientationLock .box{max-width:520px}
+    #orientationLock h2{margin:0 0 8px;font-size:22px}
+    #orientationLock p{margin:0;opacity:.8}
+        </style>
 </head>
 <body>
-  <header><h1 id="appTitle">Minimal Tasks v45</h1></header>
+  <header><h1 id="appTitle">Minimal Tasks v47</h1></header>
   <main>
     <!-- List -->
     <section id="view-list" class="card" hidden>
@@ -148,6 +154,7 @@
     </div>
   </div>
 
-  <script src="app.v45.js"></script>
+  <div id="orientationLock"><div class="box"><h2>Поверните устройство</h2><p>Приложение работает только в портретной ориентации.</p></div></div>
+<script src="app.v47.js"></script>
 </body>
 </html>
