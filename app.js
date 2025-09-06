@@ -44,6 +44,11 @@ const els={
   optChecklist: document.getElementById('optChecklist'),
   optDescription: document.getElementById('optDescription'),
   pdfChoiceCancel: document.getElementById('pdfChoiceCancel'),
+  checklistParamsModal: document.getElementById('checklistParamsModal'),
+  paramDays: document.getElementById('paramDays'),
+  paramExtra: document.getElementById('paramExtra'),
+  paramsCancel: document.getElementById('paramsCancel'),
+  paramsCreate: document.getElementById('paramsCreate'),
 };
 
 function save(){ localStorage.setItem(storeKey, JSON.stringify(tasks)); }
@@ -90,7 +95,7 @@ function setTabLabels(){
 
 // List
 function showTasks(){
-  els.viewList.hidden=false; els.appTitle.textContent='Minimal Tasks v41'; setTabLabels();
+  els.viewList.hidden=false; els.appTitle.textContent='Minimal Tasks v42'; setTabLabels();
   // tabs
   if(els.tabActive){ els.tabActive.classList.toggle('active', taskFilter==='active'); els.tabActive.onclick=()=>{ taskFilter='active'; localStorage.setItem('mt_filter', taskFilter); showTasks(); }; }
   if(els.tabDone){ els.tabDone.classList.toggle('active', taskFilter==='done'); els.tabDone.onclick=()=>{ taskFilter='done'; localStorage.setItem('mt_filter', taskFilter); showTasks(); }; }
@@ -254,7 +259,7 @@ async function attachPhotoToNote(taskId,itemId,file){
 
 // PDF: description exporter
 async function blobToDataURL(blob){ return await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); }); }
-async function exportDescriptionPDF(task){
+async function exportDescriptionPDF(task, preopenWin){
   const items=task.items||[]; const sections=[];
   for(const [idx,it] of items.entries()){
     const photos=[];
@@ -278,16 +283,12 @@ async function exportDescriptionPDF(task){
     </div>`;
   }
   html += `</body></html>`;
-  const win=window.open('','_blank'); win.document.open(); win.document.write(html); win.document.close();
+  const win = preopenWin || window.open('','_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; } win.document.open(); win.document.write(html); win.document.close();
 }
 
 // PDF: checklist exporter (pre-open window will be used from caller)
-async function exportChecklistPDF(task, preopenWin){
-  const daysStr = prompt('Сколько дней (колонки дат) добавить?', '7');
-  const days = Math.max(1, parseInt(daysStr||'7',10)||7);
-  const extraStr = prompt('Сколько добавить пустых строк? (0 = не добавлять)', '0');
-  const extra = Math.max(0, parseInt(extraStr||'0',10)||0);
-  const rows = (task.items||[]).concat(Array.from({length:extra}, ()=>({title:''})));
+async function exportChecklistPDF(task, preopenWin, days, extra){
+  const rows = (task.items||[]).concat(Array.from({length:extra||0}, ()=>({title:''})));
   const dates=[]; const today=new Date();
   for(let i=0;i<days;i++){ const d=new Date(today.getTime()+i*86400000); const dd=d.toLocaleDateString('ru-RU'); dates.push(dd); }
   let html = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>${task.title} — чек-лист</title>
@@ -309,7 +310,26 @@ function showPdfChoice(task){
   function cleanup(){ els.pdfChoiceModal.style.display='none'; els.optChecklist.onclick=null; els.optDescription.onclick=null; els.pdfChoiceCancel.onclick=null; document.removeEventListener('keydown',onKey); }
   function onKey(e){ if(e.key==='Escape') cleanup(); }
   document.addEventListener('keydown', onKey);
-  els.optChecklist.onclick = async (e)=>{ e.preventDefault(); cleanup(); const win=window.open('','_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; } await exportChecklistPDF(task, win); };
-  els.optDescription.onclick = async (e)=>{ e.preventDefault(); cleanup(); const win=window.open('','_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; } await exportDescriptionPDF(task); /* description opens its own */ };
+  els.optChecklist.onclick = async (e)=>{ e.preventDefault(); cleanup(); showChecklistParams(task); };
+  els.optDescription.onclick = async (e)=>{ e.preventDefault(); cleanup(); const win=window.open('','_blank'); if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; } await exportDescriptionPDF(task, win); };
   els.pdfChoiceCancel.onclick = (e)=>{ e.preventDefault(); cleanup(); };
+}
+
+function showChecklistParams(task){
+  els.checklistParamsModal.style.display='flex';
+  els.paramDays.value = els.paramDays.value || 7;
+  els.paramExtra.value = els.paramExtra.value || 0;
+  function cleanup(){ els.checklistParamsModal.style.display='none'; els.paramsCancel.onclick=null; els.paramsCreate.onclick=null; document.removeEventListener('keydown', onKey); }
+  function onKey(e){ if(e.key==='Escape') cleanup(); }
+  document.addEventListener('keydown', onKey);
+  els.paramsCancel.onclick = (e)=>{ e.preventDefault(); cleanup(); };
+  els.paramsCreate.onclick = async (e)=>{
+    e.preventDefault();
+    const days = Math.max(1, Math.min(60, parseInt(els.paramDays.value||'7',10)||7));
+    const extra = Math.max(0, Math.min(50, parseInt(els.paramExtra.value||'0',10)||0));
+    cleanup();
+    const win = window.open('', '_blank');
+    if(!win){ alert('Разрешите всплывающие окна для экспорта PDF.'); return; }
+    await exportChecklistPDF(task, win, days, extra);
+  };
 }
