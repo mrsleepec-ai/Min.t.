@@ -1,5 +1,5 @@
 // Mint
-const storeKey='minimal_tasks';
+const storeKey='mint_tasks';/*__MIGRATION__*/(function(){try{if(!localStorage.getItem(storeKey)){const keys=['minimal_tasks','minimal_tasks_v45','minimal_tasks_v46','minimal_tasks_v47','minimal_tasks_v48','minimal_tasks_v49','minimal_tasks_v50','minimal_tasks_v51','minimal_tasks_v52','minimal_tasks_v53','minimal_tasks_v54','minimal_tasks_v55','minimal_tasks_v56','minimal_tasks_v60','minimal_tasks_v61'];for(const k of keys){const v=localStorage.getItem(k);if(v){localStorage.setItem(storeKey,v);break;}}}}catch(e){}})();;
 let tasks=[];
 try{ tasks=JSON.parse(localStorage.getItem(storeKey)||'[]'); }catch{ tasks=[]; }
 for(const t of tasks){ if(typeof t.done!=='boolean') t.done=false; if(!Array.isArray(t.items)) t.items=[]; if(!Array.isArray(t.groups)) t.groups=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false;  if(typeof it.groupId==='undefined') it.groupId=null; } }
@@ -619,3 +619,13 @@ function renderChecklist_flat(t){
   if (window.MT_afterRenderChecklist) try{ window.MT_afterRenderChecklist(t); }catch(e){}
   }catch(e){ console.error('renderChecklist error, using flat', e); try{ renderChecklist_flat(t); }catch(_){} }
 }
+
+// --- Error overlay & guards ---
+window.__showErrorOverlay = function(msg){
+  try{
+    var el=document.getElementById('errorOverlay'); var pre=document.getElementById('errorText');
+    if(el && pre){ pre.textContent=String(msg||'Неизвестная ошибка'); el.style.display='block'; }
+  }catch(e){}
+};
+window.addEventListener('error', function(e){ __showErrorOverlay((e && e.error && e.error.stack) || e.message || e.toString()); });
+window.addEventListener('unhandledrejection', function(e){ __showErrorOverlay((e && e.reason && (e.reason.stack||e.reason.message)) || 'Unhandled rejection'); });
