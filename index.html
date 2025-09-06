@@ -51,7 +51,14 @@
         #updateBar{position:fixed;left:0;right:0;bottom:calc(12px + env(safe-area-inset-bottom));display:none;justify-content:center;z-index:120}
         #updateBar .inner{background:#111a33;border:1px solid var(--line);color:var(--fg);padding:10px 12px;border-radius:12px;display:flex;gap:10px;align-items:center;box-shadow:0 4px 18px rgba(0,0,0,.35)}
         #updateBar button{background:#0ea5e9;border:none;color:#fff;padding:8px 10px;border-radius:8px;font-weight:600}
-        </style>
+        
+    /* iOS keyboard fix */
+    input[type="text"], input[type="number"], textarea {
+      font-size:16px; /* prevents iOS from suppressing keyboard when user-scalable=no */
+      -webkit-text-size-adjust: 100%;
+      pointer-events:auto;
+    }
+    </style>
 </head>
 <body>
   <header><h1 id="appTitle">Mint</h1></header>
@@ -162,6 +169,6 @@
   </div>
 
   <div id="orientationLock"><div class="box"><h2>Поверните устройство</h2><p>Приложение работает только в портретной ориентации.</p></div></div>
-<script src="app.v53.js"></script>
+<script src="app.v54.js"></script>
 </body>
 </html>
