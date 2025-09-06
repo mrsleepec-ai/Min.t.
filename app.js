@@ -28,10 +28,6 @@ const els = {
   confirmText: document.getElementById('confirmText'),
   confirmCancel: document.getElementById('confirmCancel'),
   confirmOk: document.getElementById('confirmOk'),
-  confirmModal: document.getElementById('confirmModal'),
-  confirmText: document.getElementById('confirmText'),
-  confirmCancel: document.getElementById('confirmCancel'),
-  confirmOk: document.getElementById('confirmOk'),
   viewList: document.getElementById('view-list'),
   viewDetail: document.getElementById('view-detail'),
   appTitle: document.getElementById('appTitle'),
@@ -61,6 +57,13 @@ const els = {
 };
 
 function save() { localStorage.setItem(storeKey, JSON.stringify(tasks)); }
+function showConfirm(message, onOk){
+  els.confirmText.textContent = message;
+  els.confirmModal.style.display = 'flex';
+  function cleanup(){ els.confirmModal.style.display='none'; els.confirmOk.onclick=null; els.confirmCancel.onclick=null; }
+  els.confirmCancel.onclick = ()=> cleanup();
+  els.confirmOk.onclick = ()=>{ cleanup(); onOk(); };
+}
 function uid() { return Math.random().toString(36).slice(2, 10); }
 
 function wrap16(str, n) {
@@ -94,7 +97,6 @@ window.addEventListener('load', route);
 function showList() {
   els.viewList.hidden = false;
   els.viewDetail.hidden = true;
-  if (els.viewNote) els.viewNote.hidden = true;
   if (els.viewNote) els.viewNote.hidden = true;
   els.appTitle.textContent = 'Minimal Tasks';
 
@@ -141,11 +143,11 @@ function toggleTask(id) {
   const t = tasks.find(x => x.id === id);
   if (t) { t.done = !t.done; save(); showList(); }
 }
-function removeTask(id) {
-  tasks = tasks.filter(x => x.id !== id);
-  save();
-  if (currentId === id) location.hash = '#/';
-  showList();
+function removeTask(id){
+  showConfirm('Удалить задачу?', ()=>{
+    tasks = tasks.filter(t => t.id !== id);
+    save(); showTasks();
+  });
 }
 function openTask(id) { location.hash = '#/task/' + id; }
 
@@ -173,7 +175,6 @@ function showDetail(id) {
 
   els.viewList.hidden = true;
   els.viewDetail.hidden = false;
-  if (els.viewNote) els.viewNote.hidden = true;
   if (els.viewNote) els.viewNote.hidden = true;
   els.appTitle.textContent = task.title;
   els.detailTitle.textContent = task.title;
@@ -242,7 +243,7 @@ function addItem(taskId, text) {
   const t = tasks.find(x => x.id === taskId);
   if (!t) return;
   (t.items ||= []).push({ id: uid(), title: text.trim(), done: false, photo: null });
-  save(); showConfirm('Удалить фото?', ()=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); })=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); });
+  save(); renderChecklist(t);
 }
 function toggleItem(taskId, itemId) {
   const t = tasks.find(x => x.id === taskId);
@@ -250,13 +251,14 @@ function toggleItem(taskId, itemId) {
   const it = t.items.find(i => i.id === itemId);
   if (!it) return;
   it.done = !it.done;
-  save(); showConfirm('Удалить фото?', ()=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); })=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); });
+  save(); renderChecklist(t);
 }
-function removeItem(taskId, itemId) {
-  const t = tasks.find(x => x.id === taskId);
-  if (!t) return;
-  t.items = t.items.filter(i => i.id !== itemId);
-  save(); showConfirm('Удалить фото?', ()=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); })=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); });
+function removeItem(taskId, itemId){
+  showConfirm('Удалить подзадачу?', ()=>{
+    const t = tasks.find(x => x.id === taskId); if (!t) return;
+    t.items = (t.items||[]).filter(s => s.id !== itemId);
+    save(); showDetail(taskId);
+  });
 }
 function editItem(taskId, itemId) {
   const t = tasks.find(x => x.id === taskId);
@@ -266,7 +268,7 @@ function editItem(taskId, itemId) {
   const next = prompt('Изменить пункт:', it.title);
   if (next !== null) {
     it.title = next.trim();
-    save(); showConfirm('Удалить фото?', ()=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); })=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); });
+    save(); renderChecklist(t);
   }
 }
 
@@ -299,7 +301,7 @@ function attachPhoto(taskId, itemId) {
       const it = t.items.find(i => i.id === itemId);
       if (!it) return;
       it.photo = dataUrl;
-      save(); showConfirm('Удалить фото?', ()=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); })=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); });
+      save(); renderChecklist(t);
     } catch (e) {
       alert('Не удалось добавить фото: ' + e);
     }
@@ -307,13 +309,14 @@ function attachPhoto(taskId, itemId) {
   input.click();
 }
 
-function removePhoto(taskId, itemId) {
-  const t = tasks.find(x => x.id === taskId);
-  if (!t) return;
-  const it = t.items.find(i => i.id === itemId);
-  if (!it) return;
-  it.photo = null;
-  save(); showConfirm('Удалить фото?', ()=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); })=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); });
+function removePhoto(taskId, itemId){
+  const t = tasks.find(x => x.id === taskId); if (!t) return;
+  const it = (t.items||[]).find(i => i.id === itemId); if (!it) return;
+  showConfirm('Удалить фото?', ()=>{
+    if (it.photoKey) { try { idbDel(it.photoKey); } catch(e){} it.photoKey = null; }
+    it.photo = null;
+    save(); renderChecklist(t);
+  });
 }
 
 function compressImageToDataURL(file, maxW, quality) {
