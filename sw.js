@@ -1,5 +1,5 @@
 // SW v21 — stale-while-revalidate
-const CACHE = 'minimal-tasks-cache-v26';
+const CACHE = 'minimal-tasks-cache-v27';
 const ASSETS = [
   './',
   './index.html',

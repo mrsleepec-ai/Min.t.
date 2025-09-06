@@ -28,6 +28,10 @@ const els = {
   confirmText: document.getElementById('confirmText'),
   confirmCancel: document.getElementById('confirmCancel'),
   confirmOk: document.getElementById('confirmOk'),
+  confirmModal: document.getElementById('confirmModal'),
+  confirmText: document.getElementById('confirmText'),
+  confirmCancel: document.getElementById('confirmCancel'),
+  confirmOk: document.getElementById('confirmOk'),
   viewList: document.getElementById('view-list'),
   viewDetail: document.getElementById('view-detail'),
   appTitle: document.getElementById('appTitle'),
@@ -238,7 +242,7 @@ function addItem(taskId, text) {
   const t = tasks.find(x => x.id === taskId);
   if (!t) return;
   (t.items ||= []).push({ id: uid(), title: text.trim(), done: false, photo: null });
-  save(); renderChecklist(t);
+  save(); showConfirm('Удалить фото?', ()=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); })=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); });
 }
 function toggleItem(taskId, itemId) {
   const t = tasks.find(x => x.id === taskId);
@@ -246,13 +250,13 @@ function toggleItem(taskId, itemId) {
   const it = t.items.find(i => i.id === itemId);
   if (!it) return;
   it.done = !it.done;
-  save(); renderChecklist(t);
+  save(); showConfirm('Удалить фото?', ()=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); })=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); });
 }
 function removeItem(taskId, itemId) {
   const t = tasks.find(x => x.id === taskId);
   if (!t) return;
   t.items = t.items.filter(i => i.id !== itemId);
-  save(); renderChecklist(t);
+  save(); showConfirm('Удалить фото?', ()=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); })=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); });
 }
 function editItem(taskId, itemId) {
   const t = tasks.find(x => x.id === taskId);
@@ -262,7 +266,7 @@ function editItem(taskId, itemId) {
   const next = prompt('Изменить пункт:', it.title);
   if (next !== null) {
     it.title = next.trim();
-    save(); renderChecklist(t);
+    save(); showConfirm('Удалить фото?', ()=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); })=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); });
   }
 }
 
@@ -295,7 +299,7 @@ function attachPhoto(taskId, itemId) {
       const it = t.items.find(i => i.id === itemId);
       if (!it) return;
       it.photo = dataUrl;
-      save(); renderChecklist(t);
+      save(); showConfirm('Удалить фото?', ()=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); })=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); });
     } catch (e) {
       alert('Не удалось добавить фото: ' + e);
     }
@@ -308,7 +312,8 @@ function removePhoto(taskId, itemId) {
   if (!t) return;
   const it = t.items.find(i => i.id === itemId);
   if (!it) return;
-  showConfirm('Удалить фото?', ()=>{ if (it.photoKey) { try { idbDel(it.photoKey); } catch(e){} it.photoKey=null; } it.photo=null; save(); renderChecklist(t); });
+  it.photo = null;
+  save(); showConfirm('Удалить фото?', ()=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); })=>{ if(it.photoKey){ try{ idbDel(it.photoKey);}catch(e){} it.photoKey=null;} it.photo=null; save(); renderChecklist(t); });
 }
 
 function compressImageToDataURL(file, maxW, quality) {
@@ -445,5 +450,4 @@ function showNote(taskId, itemId) {
     els.saveNoteBtn.textContent = 'Сохранено';
     setTimeout(() => els.saveNoteBtn.textContent = 'Сохранить', 800);
   };
-  els.clearNoteBtn.onclick = () => { els.noteText.value = ''; it.note = ''; save(); };
-}
+  }
