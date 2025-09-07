@@ -150,7 +150,8 @@ function showDetail(taskId){
   els.addSub.onsubmit=(e)=>{ e.preventDefault(); const v=els.subTitle.value.trim(); if(!v) return; (t.items ||= []).push({id:uid(), title:v, done:false, note:'', notePhotoKeys:[], folderId:null}); t.done=false; save(); setTabLabels(); els.subTitle.value=''; renderChecklist(t); };
 }
 
-function renderChecklist(t){
+\1
+  try{ renderFoldersBar(t); }catch(e){}
   const items = t.items || [];
   els.checkList.innerHTML=''; els.emptyCheck.hidden = items.length>0;
   for(const it of items){
@@ -496,15 +497,32 @@ function showChecklistParams(task){
   }
 })();
 
-// --- minimal folders (prompt-based) ---
+// --- Folders: UI bar + actions ---
 function createFolder(taskId){
   const t = tasks.find(x=>x.id===taskId); if(!t) return;
   if(!Array.isArray(t.folders)) t.folders=[];
   const name = prompt('Название новой папки','');
   if(!name) return;
-  t.folders.push({id:uid(), title:name.trim()});
+  t.folders.push({id:uid(), title:String(name).trim()});
   save();
-  if(current.task && current.task.id===taskId){ renderChecklist(t); }
+  if(current.task && current.task.id===taskId){ renderFoldersBar(t); }
+}
+function renderFoldersBar(t){
+  const bar = document.getElementById('foldersBar');
+  if(!bar) return;
+  bar.innerHTML='';
+  if(!t.folders || !t.folders.length){
+    const span=document.createElement('div'); span.className='folders-empty'; span.textContent='Папок нет';
+    bar.append(span); return;
+  }
+  for(const f of t.folders){
+    const chip=document.createElement('div'); chip.className='folders-chip';
+    const label=document.createElement('span'); label.textContent = '📁 ' + f.title;
+    const cnt=document.createElement('span'); cnt.style.opacity='.7'; cnt.textContent='('+(t.items||[]).filter(x=>x.folderId===f.id).length+')';
+    const del=document.createElement('button'); del.className='del'; del.textContent='✖';
+    del.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); if((t.items||[]).some(x=>x.folderId===f.id)){ alert('Сначала уберите элементы из папки'); return; } if(!confirm('Удалить папку «'+f.title+'»?')) return; t.folders=t.folders.filter(x=>x.id!==f.id); save(); renderFoldersBar(t); };
+    chip.append(label,cnt,del); bar.append(chip);
+  }
 }
 function assignFolder(taskId, itemId){
   const t = tasks.find(x=>x.id===taskId); if(!t) return;
@@ -516,5 +534,6 @@ function assignFolder(taskId, itemId){
   if(!isFinite(n)) return;
   if(n<=0){ it.folderId=null; } else { const f=t.folders[n-1]; if(f) it.folderId=f.id; }
   save();
+  renderFoldersBar(t);
   renderChecklist(t);
 }

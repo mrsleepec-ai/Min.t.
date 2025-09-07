@@ -65,7 +65,11 @@
     #pdfViewer header button{background:#0ea5e9;color:#fff;border:none;border-radius:10px;padding:8px 10px;font-weight:600}
     #pdfViewer header .ghost{background:transparent;border:1px solid var(--line);color:#e6eefc}
     #pdfViewer iframe{flex:1;border:0;width:100%;background:#fff}
-        </style>
+        
+.folders-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#f8fafc}
+.folders-chip .del{border:0;background:transparent;opacity:.7}
+.folders-empty{color:var(--muted);opacity:.9}
+</style>
 </head>
 <body>
   <header><h1 id="appTitle">Mint</h1></header>
@@ -99,7 +103,8 @@
         <input id="subTitle" type="text" maxlength="160" placeholder="Новая подзадача…" required>
         <button>Добавить</button>
       </form>
-      <ul id="checkList" class="check"></ul>
+      <div id="foldersBar" class="folders-bar" style="display:flex;flex-wrap:wrap;gap:8px;margin:6px 0;"></div>
+<ul id="checkList" class="check"></ul>
       <p id="emptyCheck" class="muted" hidden>Подзадач пока нет.</p>
     </section>
 
