@@ -2,7 +2,7 @@
 const storeKey='minimal_tasks_v45';
 let tasks=[];
 try{ tasks=JSON.parse(localStorage.getItem(storeKey)||'[]'); }catch{ tasks=[]; }
-for(const t of tasks){ if(typeof t.done!=='boolean') t.done=false; if(!Array.isArray(t.items)) t.items=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; } }
+for(const t of tasks){ if(typeof t.done!=='boolean') t.done=false; if(!Array.isArray(t.items)) t.items=[]; if(!Array.isArray(t.folders)) t.folders=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; if(typeof it.folderId==='undefined') it.folderId=null; } }
 
 const els={
   appTitle: document.getElementById('appTitle'),
@@ -142,12 +142,12 @@ function showDetail(taskId){
   els.viewDetail.hidden=false; els.appTitle.textContent='Подзадачи';
   els.taskHeader.textContent=t.title;
   els.pdfBtn.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); showPdfChoice(t); };
-  els.renameTaskBtn.onclick=()=> renameTask(t.id);
+  els.renameTaskBtn.onclick=()=> createFolder(t.id);
   els.deleteTaskBtn.onclick=()=> removeTask(t.id);
 
   renderChecklist(t);
 
-  els.addSub.onsubmit=(e)=>{ e.preventDefault(); const v=els.subTitle.value.trim(); if(!v) return; (t.items ||= []).push({id:uid(), title:v, done:false, note:'', notePhotoKeys:[]}); t.done=false; save(); setTabLabels(); els.subTitle.value=''; renderChecklist(t); };
+  els.addSub.onsubmit=(e)=>{ e.preventDefault(); const v=els.subTitle.value.trim(); if(!v) return; (t.items ||= []).push({id:uid(), title:v, done:false, note:'', notePhotoKeys:[], folderId:null}); t.done=false; save(); setTabLabels(); els.subTitle.value=''; renderChecklist(t); };
 }
 
 function renderChecklist(t){
@@ -160,7 +160,7 @@ function renderChecklist(t){
     const title=document.createElement('div'); title.className='title'; title.textContent=it.title;
     const actions=document.createElement('div'); actions.className='actions';
     const attachBtn=ghost('📎', ()=> attachPhoto(t.id, it.id));
-    const editBtn=ghost('✏️', ()=> editItem(t.id, it.id));
+    const editBtn=ghost('📁', ()=> assignFolder(t.id, it.id));
     const delBtn=ghost('🗑️', ()=> removeItem(t.id, it.id));
     actions.append(attachBtn, editBtn, delBtn);
     actions.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); });
@@ -496,29 +496,25 @@ function showChecklistParams(task){
   }
 })();
 
-// --- Folders support added in v61 ---
-function openFolders(){
-  const t = state.tasks.find(x=>x.id===state.currentTaskId);
-  if(!t) return;
+// --- minimal folders (prompt-based) ---
+function createFolder(taskId){
+  const t = tasks.find(x=>x.id===taskId); if(!t) return;
   if(!Array.isArray(t.folders)) t.folders=[];
-  els.folderName.value='';
-  renderFoldersList(t);
-  show(els.foldersModal);
+  const name = prompt('Название новой папки','');
+  if(!name) return;
+  t.folders.push({id:uid(), title:name.trim()});
+  save();
+  if(current.task && current.task.id===taskId){ renderChecklist(t); }
 }
-function renderFoldersList(t){
-  const box=els.foldersList; box.innerHTML='';
-  t.folders.forEach(f=>{
-    const row=document.createElement('div'); row.className='row'; row.style.gridTemplateColumns='1fr auto';
-    const title=document.createElement('div'); title.className='title'; title.textContent=f.title;
-    const del=ghost('🗑️', ()=>{ if(t.items.some(it=>it.folderId===f.id)){ alert('Сначала уберите элементы из папки'); return; } t.folders=t.folders.filter(x=>x.id!==f.id); save(); renderFoldersList(t); renderChecklist(t); });
-    row.append(title,del); box.append(row);
-  });
-}
-function assignFolder(t,it){
-  if(!Array.isArray(t.folders)) t.folders=[];
-  if(!t.folders.length){ alert('Сначала создайте папку через кнопку 📁 Папки.'); return; }
-  const msg='Куда поместить?\n'+t.folders.map((f,i)=> (i+1)+'. '+f.title).join('\n')+'\n0 — Без папки';
-  const pick=prompt(msg,'0'); const n=Number(pick||'0'); if(!isFinite(n)) return;
-  if(n<=0) it.folderId=null; else { const f=t.folders[n-1]; if(!f) return; it.folderId=f.id; }
-  save(); renderChecklist(t);
+function assignFolder(taskId, itemId){
+  const t = tasks.find(x=>x.id===taskId); if(!t) return;
+  if(!Array.isArray(t.folders) || t.folders.length===0){ return; } // нет папок — ничего не делаем
+  const it = (t.items||[]).find(i=>i.id===itemId); if(!it) return;
+  const list = t.folders.map((f,i)=> (i+1)+'. '+f.title).join('\n');
+  const pick = prompt('Выберите папку:\n'+list+'\n0 — Без папки','0');
+  const n = Number(pick||'0');
+  if(!isFinite(n)) return;
+  if(n<=0){ it.folderId=null; } else { const f=t.folders[n-1]; if(f) it.folderId=f.id; }
+  save();
+  renderChecklist(t);
 }
