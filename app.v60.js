@@ -157,31 +157,17 @@ function renderChecklist(t){
     const li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
     const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!it.done;
     cb.addEventListener('change', e=>{ e.preventDefault(); e.stopPropagation(); it.done=cb.checked; const allDone=(t.items||[]).length>0 && (t.items||[]).every(x=>x.done); t.done=allDone; save(); setTabLabels(); });
-    const title=document.createElement('div'); title.className='title'; title.textContent = (it.isFolder?'📁 ':'') + it.title;
+    const title=document.createElement('div'); title.className='title'; title.textContent=it.title;
     const actions=document.createElement('div'); actions.className='actions';
     const attachBtn=ghost('📎', ()=> attachPhoto(t.id, it.id));
-    const folderBtn=ghost('📁', ()=> makeItemFolder(t.id, it.id));
+    const editBtn=ghost('✏️', ()=> editItem(t.id, it.id));
     const delBtn=ghost('🗑️', ()=> removeItem(t.id, it.id));
-    actions.append(attachBtn, folderBtn, delBtn);
+    actions.append(attachBtn, editBtn, delBtn);
     actions.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); });
-    const link=document.createElement('a'); link.className='row-link'; link.href = (it.isFolder && it.linkTaskId) ? ('#/task/'+it.linkTaskId) : ('#/note/'+t.id+'/'+it.id);
+    const link=document.createElement('a'); link.className='row-link'; link.href='#/note/'+t.id+'/'+it.id;
     li.append(cb,title,actions,link);
     els.checkList.append(li);
   }
-}
-
-function makeItemFolder(taskId, itemId){
-  const t=tasks.find(x=>x.id===taskId); if(!t) return;
-  const it=(t.items||[]).find(i=>i.id===itemId); if(!it) return;
-  if(it.isFolder && it.linkTaskId){ location.hash='#/task/'+it.linkTaskId; return; }
-  // create new task
-  const nid = uid();
-  const newTask = { id: nid, title: it.title, items: [], done: false, createdAt: Date.now() };
-  tasks.push(newTask);
-  // mark item as folder pointing to task
-  it.isFolder = true; it.linkTaskId = nid;
-  save(); setTabLabels(); renderChecklist(t);
-  showConfirm('Папка создана. Открыть ее?', ()=>{ location.hash = '#/task/'+nid; });
 }
 function editItem(taskId, itemId){
   const t=tasks.find(x=>x.id===taskId); if(!t) return;
@@ -509,3 +495,30 @@ function showChecklistParams(task){
     };
   }
 })();
+
+// --- Folders support added in v61 ---
+function openFolders(){
+  const t = state.tasks.find(x=>x.id===state.currentTaskId);
+  if(!t) return;
+  if(!Array.isArray(t.folders)) t.folders=[];
+  els.folderName.value='';
+  renderFoldersList(t);
+  show(els.foldersModal);
+}
+function renderFoldersList(t){
+  const box=els.foldersList; box.innerHTML='';
+  t.folders.forEach(f=>{
+    const row=document.createElement('div'); row.className='row'; row.style.gridTemplateColumns='1fr auto';
+    const title=document.createElement('div'); title.className='title'; title.textContent=f.title;
+    const del=ghost('🗑️', ()=>{ if(t.items.some(it=>it.folderId===f.id)){ alert('Сначала уберите элементы из папки'); return; } t.folders=t.folders.filter(x=>x.id!==f.id); save(); renderFoldersList(t); renderChecklist(t); });
+    row.append(title,del); box.append(row);
+  });
+}
+function assignFolder(t,it){
+  if(!Array.isArray(t.folders)) t.folders=[];
+  if(!t.folders.length){ alert('Сначала создайте папку через кнопку 📁 Папки.'); return; }
+  const msg='Куда поместить?\n'+t.folders.map((f,i)=> (i+1)+'. '+f.title).join('\n')+'\n0 — Без папки';
+  const pick=prompt(msg,'0'); const n=Number(pick||'0'); if(!isFinite(n)) return;
+  if(n<=0) it.folderId=null; else { const f=t.folders[n-1]; if(!f) return; it.folderId=f.id; }
+  save(); renderChecklist(t);
+}
