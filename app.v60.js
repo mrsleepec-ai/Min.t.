@@ -564,3 +564,118 @@ document.addEventListener('click', function(e){
 }, true);
 
 
+
+
+// === Folders: safe wrapper over renderChecklist (no core edits) ===
+(function(){
+  function ensureModals(){
+    if(!document.getElementById('folderPickerModal')){
+      const m=document.createElement('div');
+      m.id='folderPickerModal';
+      m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.2);display:none;align-items:flex-end;justify-content:center;padding:16px;z-index:9999';
+      m.innerHTML=`<div style="background:#fff;border-radius:16px;padding:12px;min-width:min(520px,95vw);max-height:85vh;overflow:auto;box-shadow:0 10px 30px rgba(0,0,0,.2)">
+        <h3 style="margin:0 0 8px">Добавить в папку</h3>
+        <div id="folderPickerList"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+          <button type="button" id="folderPickerClose" class="ghost">Отмена</button>
+        </div>
+      </div>`;
+      document.body.appendChild(m);
+      m.querySelector('#folderPickerClose').onclick=()=>{m.style.display='none';};
+    }
+    if(!document.getElementById('folderViewModal')){
+      const v=document.createElement('div');
+      v.id='folderViewModal';
+      v.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.2);display:none;align-items:flex-end;justify-content:center;padding:16px;z-index:9999';
+      v.innerHTML=`<div style="background:#fff;border-radius:16px;padding:12px;min-width:min(520px,95vw);max-height:85vh;overflow:auto;box-shadow:0 10px 30px rgba(0,0,0,.2)">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <h3 id="folderViewTitle" style="margin:0">Папка</h3>
+          <button type="button" id="folderViewClose" class="ghost">Закрыть</button>
+        </div>
+        <ul id="folderViewList" class="list" style="margin-top:12px;padding:0;list-style:none"></ul>
+      </div>`;
+      document.body.appendChild(v);
+      v.querySelector('#folderViewClose').onclick=()=>{v.style.display='none';};
+    }
+  }
+  function showPicker(t,it){
+    ensureModals();
+    const modal=document.getElementById('folderPickerModal');
+    const list=document.getElementById('folderPickerList');
+    list.innerHTML='';
+    const folders=(t.items||[]).filter(x=>x.type==='folder');
+    if(folders.length===0){
+      const p=document.createElement('p'); p.textContent='В этой задаче пока нет папок.'; list.appendChild(p);
+    } else {
+      folders.forEach(f=>{
+        const b=document.createElement('button'); b.type='button'; b.className='ghost'; b.textContent='📁 '+f.title;
+        b.onclick=()=>{ it.folderId=f.id; save(); modal.style.display='none'; renderChecklist(t); };
+        list.appendChild(b);
+      });
+    }
+    if(it.folderId){
+      const sep=document.createElement('div'); sep.style.margin='8px 0'; list.appendChild(sep);
+      const u=document.createElement('button'); u.type='button'; u.className='ghost'; u.textContent='⏏️ Убрать из папки';
+      u.onclick=()=>{ delete it.folderId; save(); modal.style.display='none'; renderChecklist(t); };
+      list.appendChild(u);
+    }
+    modal.style.display='flex';
+  }
+  function openFolder(t,f){
+    ensureModals();
+    const v=document.getElementById('folderViewModal');
+    const ttl=v.querySelector('#folderViewTitle');
+    const lst=v.querySelector('#folderViewList');
+    ttl.textContent=f.title; lst.innerHTML='';
+    const arr=(t.items||[]).filter(x=>x.type!=='folder' && x.folderId===f.id);
+    if(arr.length===0){
+      const li=document.createElement('li'); li.className='row';
+      const sp=document.createElement('div'); const tt=document.createElement('div'); tt.className='title'; tt.textContent='Пусто';
+      const ac=document.createElement('div'); ac.className='actions'; li.append(sp,tt,ac); lst.appendChild(li);
+    }else{
+      arr.forEach(it=>{
+        const li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
+        const sp=document.createElement('div'); const tt=document.createElement('div'); tt.className='title'; tt.textContent=it.title;
+        const ac=document.createElement('div'); ac.className='actions';
+        const openBtn=document.createElement('button'); openBtn.type='button'; openBtn.className='ghost'; openBtn.textContent='↗️';
+        openBtn.onclick=()=>{ location.hash='#/note/'+t.id+'/'+it.id; v.style.display='none'; };
+        ac.append(openBtn); li.append(sp,tt,ac); lst.appendChild(li);
+      });
+    }
+    v.style.display='flex';
+  }
+
+  const orig = window.renderChecklist;
+  if (typeof orig === 'function'){
+    window.renderChecklist = function(t){
+      const r = orig.apply(this, arguments);
+      try{
+        const list = (window.els && els.checkList) ? els.checkList : document.querySelector('.list') || document.querySelector('#view-detail .list');
+        if(!list) return r;
+        (list.querySelectorAll('li.row[data-id]')||[]).forEach(li=>{
+          const id=li.dataset.id;
+          const it=(t.items||[]).find(i=>i.id===id);
+          if(!it) return;
+          const actions=li.querySelector('.actions')||li.lastElementChild;
+          if(it.type==='folder'){
+            if(!li.dataset.folderWired){
+              li.dataset.folderWired='1';
+              li.addEventListener('click',(e)=>{
+                if(e.target && (e.target.tagName==='BUTTON' || e.target.closest('button'))) return;
+                openFolder(t, it);
+              });
+            }
+          } else {
+            if(actions && !actions.querySelector('.moveToFolderBtn')){
+              const btn=document.createElement('button');
+              btn.type='button'; btn.className='ghost moveToFolderBtn'; btn.textContent='📂';
+              btn.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); showPicker(t, it); };
+              actions.appendChild(btn);
+            }
+          }
+        });
+      }catch(e){ /* silent */ }
+      return r;
+    };
+  }
+})();
