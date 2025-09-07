@@ -60,6 +60,15 @@ const els={
   folderItemAdd:document.getElementById('folderItemAdd'),
   folderList:document.getElementById('folderList'),
   folderEmpty:document.getElementById('folderEmpty')
+,
+  folder:document.getElementById('view-folder'),
+  backFromFolder:document.getElementById('backFromFolder'),
+  deleteFolderBtn:document.getElementById('deleteFolderBtn'),
+  folderTitle:document.getElementById('folderTitle'),
+  folderItemInput:document.getElementById('folderItemInput'),
+  folderItemAdd:document.getElementById('folderItemAdd'),
+  folderList:document.getElementById('folderList'),
+  folderEmpty:document.getElementById('folderEmpty')
 };
 
 function save(){ localStorage.setItem(storeKey, JSON.stringify(tasks)); }
@@ -586,15 +595,7 @@ try{
 function handleHash(){
   const raw=(location.hash||'').slice(1);
   const p=raw.split('/').filter(Boolean);
-  if(p.length===0){ setView('list'); return; }
-  switch(p[0]){
-    case 'list': setView('list'); break;
-    case 'task': openTask(p[1]); break;
-    case 'note': openNote(p[1],p[2]); break;
-    case 'folder': openFolder(p[1],p[2]); break;
-    default: setView('list');
-  }
-}
+  if(p.length===0){ setView && setView('list'); return; }
   switch(p[0]){
     case 'list':   setView && setView('list'); break;
     case 'task':   openTask && openTask(p[1]); break;
@@ -606,9 +607,18 @@ function handleHash(){
 window.addEventListener('hashchange', handleHash);
 document.addEventListener('DOMContentLoaded', handleHash);
 
-// BOOT_LIST_DEFAULT
-window.addEventListener('hashchange', handleHash);
+// BOOT_HIDE_FOLDER
 document.addEventListener('DOMContentLoaded', function(){
-  try{ if(!location.hash) location.hash = '#/list'; }catch(e){}
-  handleHash();
+  try{ els.folder.classList.add('hidden'); }catch(e){}
 });
+
+// HIDE_ON_BACK
+try{
+  if(els.backFromFolder){
+    const prev = els.backFromFolder.onclick;
+    els.backFromFolder.onclick = function(){
+      try{ els.folder.classList.add('hidden'); }catch(e){}
+      if(typeof prev==='function') prev();
+    };
+  }
+}catch(e){}
