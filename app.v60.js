@@ -593,3 +593,10 @@ try{
     }, true);
   }
 }catch(_){}
+
+// HOTFIX boot
+try{
+  current = current || {};
+  current.folder = null;
+  if(typeof setView==='function') setView('task');
+}catch(e){}
