@@ -51,6 +51,15 @@ const els={
   paramLandscape: document.getElementById('paramLandscape'),
   paramsCancel: document.getElementById('paramsCancel'),
   paramsCreate: document.getElementById('paramsCreate'),
+,
+  folder:document.getElementById('view-folder'),
+  backFromFolder:document.getElementById('backFromFolder'),
+  deleteFolderBtn:document.getElementById('deleteFolderBtn'),
+  folderTitle:document.getElementById('folderTitle'),
+  folderItemInput:document.getElementById('folderItemInput'),
+  folderItemAdd:document.getElementById('folderItemAdd'),
+  folderList:document.getElementById('folderList'),
+  folderEmpty:document.getElementById('folderEmpty')
 };
 
 function save(){ localStorage.setItem(storeKey, JSON.stringify(tasks)); }
@@ -529,65 +538,30 @@ function assignFolder(taskId,itemId){
   renderChecklist(t);
 }
 
-// Folder overlay (surgical, routerless)
-const fo = {
-  root:document.getElementById('folderOverlay'),
-  back:document.getElementById('foBack'),
-  title:document.getElementById('foTitle'),
-  del:document.getElementById('foDelete'),
-  input:document.getElementById('foInput'),
-  add:document.getElementById('foAdd'),
-  list:document.getElementById('foList'),
-  empty:document.getElementById('foEmpty')
-};
-function foOpen(taskId, folderId){
-  const t = tasks.find(x=>x.id===taskId); if(!t) return;
-  const f = (t.items||[]).find(x=>x.id===folderId && x.type==='folder'); if(!f) return;
+function openFolder(taskId, folderId){
+  const t = tasks.find(x=>x.id===taskId); if(!t){ setView('task'); return; }
+  const f = (t.items||[]).find(x=>x.id===folderId && x.type==='folder'); if(!f){ openTask(taskId); return; }
   window.current = window.current || {}; current.task=t; current.folder=f;
-  fo.title.textContent = f.title;
-  foRender();
-  fo.root.classList.remove('hidden');
-  try{ fo.input.focus(); }catch(e){}
+  els.folderTitle.textContent = f.title;
+  renderFolderList(t,f);
+  setView('folder');
 }
-function foClose(){ fo.root.classList.add('hidden'); }
-function foRender(){
-  const t=current.task, f=current.folder;
-  fo.list.innerHTML='';
+function renderFolderList(t,f){
+  const list=els.folderList; list.innerHTML='';
   const arr=(t.items||[]).filter(x=>x.type!=='folder' && x.folderId===f.id);
-  fo.empty.style.display = arr.length? 'none':'block';
-  arr.forEach(it=> fo.list.appendChild(itemRow(t,it)));
+  els.folderEmpty.style.display = arr.length? 'none':'block';
+  arr.forEach(it=> list.appendChild(itemRow(t,it)));
 }
-fo.back && (fo.back.onclick = foClose);
-fo.add && (fo.add.onclick = ()=>{
+els.backFromFolder.onclick = ()=>{ location.hash = '#/task/'+(current && current.task ? current.task.id : ''); };
+els.folderItemAdd.onclick = ()=>{
   const t=current.task, f=current.folder; if(!t||!f) return;
-  const v=(fo.input.value||'').trim(); if(!v) return;
+  const v=(els.folderItemInput.value||'').trim(); if(!v) return;
   (t.items=t.items||[]).push({id:uid(), title:v, done:false, note:'', photos:[], folderId:f.id, type:'item'});
-  fo.input.value=''; save(); foRender(); renderChecklist(t);
-});
-fo.del && (fo.del.onclick = ()=>{
+  els.folderItemInput.value=''; save(); renderFolderList(t,f); renderChecklist(t);
+};
+els.deleteFolderBtn.onclick = ()=>{
   const t=current.task, f=current.folder; if(!t||!f) return;
   if((t.items||[]).some(x=>x.folderId===f.id)){ alert('Сначала уберите подзадачи из папки'); return; }
   if(!confirm('Удалить папку «'+f.title+'»?')) return;
-  t.items=t.items.filter(x=>x.id!==f.id); save(); foClose(); renderChecklist(t);
-});
-
-/* FOLDER_INTERCEPT_NOTE */
-(function(){
-  if(typeof window.openNote==='function'){
-    const _openNote = window.openNote;
-    window.openNote = function(taskId,itemId){
-      try{
-        const t=tasks.find(x=>x.id===taskId);
-        const it=(t && t.items || []).find(x=>x.id===itemId);
-        if(it && it.type==='folder'){ foOpen(taskId,itemId); return; }
-      }catch(e){}
-      return _openNote.apply(this, arguments);
-    };
-  }
-})();
-// FOLDER_HASH_LISTENER
-window.addEventListener('hashchange', function(){
-  const raw=(location.hash||'').slice(1);
-  const p=raw.split('/').filter(Boolean);
-  if(p[0]==='folder'){ foOpen(p[1],p[2]); }
-});
+  t.items=t.items.filter(x=>x.id!==f.id); save(); setView('task'); renderChecklist(t);
+};
