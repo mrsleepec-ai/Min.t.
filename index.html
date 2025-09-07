@@ -65,12 +65,7 @@
     #pdfViewer header button{background:#0ea5e9;color:#fff;border:none;border-radius:10px;padding:8px 10px;font-weight:600}
     #pdfViewer header .ghost{background:transparent;border:1px solid var(--line);color:#e6eefc}
     #pdfViewer iframe{flex:1;border:0;width:100%;background:#fff}
-        
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.2);display:flex;align-items:flex-end;justify-content:center;padding:16px;z-index:9999}
-.modal.hidden{display:none}
-.modal .sheet{background:#fff;border-radius:16px;padding:12px;min-width:min(520px,95vw);max-height:85vh;overflow:auto;box-shadow:0 10px 30px rgba(0,0,0,.2)}
-@media (max-width:480px){ .modal .sheet{min-width:95vw} }
-</style>
+        </style>
 </head>
 <body>
   <header><h1 id="appTitle">Mint</h1></header>
@@ -136,28 +131,7 @@
       </header>
       <iframe id="pdfFrame" title="Просмотр PDF/печати"></iframe>
     </div>
-    
-  <!-- Folder picker modal -->
-  <div id="folderPickerModal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="sheet">
-      <h3 style="margin:0 0 8px">Добавить в папку</h3>
-      <div id="folderPickerList"></div>
-      <div class="actions" style="justify-content:flex-end;gap:8px;margin-top:12px">
-        <button type="button" id="folderPickerClose" class="ghost">Отмена</button>
-      </div>
-    </div>
-  </div>
-  <!-- Folder view modal -->
-  <div id="folderViewModal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="sheet">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <h3 id="folderViewTitle" style="margin:0">Папка</h3>
-        <button type="button" id="folderViewClose" class="ghost">Закрыть</button>
-      </div>
-      <ul id="folderViewList" class="list" style="margin-top:12px"></ul>
-    </div>
-  </div>
-</main>
+    </main>
 
   <!-- Confirm modal -->
   <div id="confirmModal" class="modal">
@@ -211,6 +185,6 @@
   </div>
 
   <div id="orientationLock"><div class="box"><h2>Поверните устройство</h2><p>Приложение работает только в портретной ориентации.</p></div></div>
-<script src="app.v61.js?v=61"></script>
+<script src="app.v60.js"></script>
 </body>
 </html>

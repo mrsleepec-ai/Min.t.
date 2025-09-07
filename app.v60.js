@@ -56,14 +56,6 @@ const els={
   paramLandscape: document.getElementById('paramLandscape'),
   paramsCancel: document.getElementById('paramsCancel'),
   paramsCreate: document.getElementById('paramsCreate'),
-,
-  folderPickerModal:document.getElementById('folderPickerModal'),
-  folderPickerList:document.getElementById('folderPickerList'),
-  folderPickerClose:document.getElementById('folderPickerClose'),
-  folderViewModal:document.getElementById('folderViewModal'),
-  folderViewTitle:document.getElementById('folderViewTitle'),
-  folderViewList:document.getElementById('folderViewList'),
-  folderViewClose:document.getElementById('folderViewClose')
 };
 
 function save(){ localStorage.setItem(storeKey, JSON.stringify(tasks)); }
@@ -574,59 +566,107 @@ document.addEventListener('click', function(e){
 
 
 
-// --- Folder move & view ---
-function hideFolderPicker(){ els.folderPickerModal.classList.add('hidden'); }
+// === Folder move & view (no HTML edits) ===
+function ensureFolderModals(){
+  if (!document.getElementById('folderPickerModal')) {
+    const picker = document.createElement('div');
+    picker.id = 'folderPickerModal';
+    picker.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.2);display:none;align-items:flex-end;justify-content:center;padding:16px;z-index:9999';
+    picker.innerHTML = `
+      <div style="background:#fff;border-radius:16px;padding:12px;min-width:min(520px,95vw);max-height:85vh;overflow:auto;box-shadow:0 10px 30px rgba(0,0,0,.2)">
+        <h3 style="margin:0 0 8px">Добавить в папку</h3>
+        <div id="folderPickerList"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+          <button type="button" id="folderPickerClose" class="ghost">Отмена</button>
+        </div>
+      </div>`;
+    document.body.appendChild(picker);
+    picker.querySelector('#folderPickerClose').onclick = () => hideFolderPicker();
+  }
+  if (!document.getElementById('folderViewModal')) {
+    const view = document.createElement('div');
+    view.id = 'folderViewModal';
+    view.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.2);display:none;align-items:flex-end;justify-content:center;padding:16px;z-index:9999';
+    view.innerHTML = `
+      <div style="background:#fff;border-radius:16px;padding:12px;min-width:min(520px,95vw);max-height:85vh;overflow:auto;box-shadow:0 10px 30px rgba(0,0,0,.2)">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <h3 id="folderViewTitle" style="margin:0">Папка</h3>
+          <button type="button" id="folderViewClose" class="ghost">Закрыть</button>
+        </div>
+        <ul id="folderViewList" class="list" style="margin-top:12px;padding:0;list-style:none"></ul>
+      </div>`;
+    document.body.appendChild(view);
+    view.querySelector('#folderViewClose').onclick = () => { view.style.display='none'; };
+  }
+}
+
+function hideFolderPicker(){
+  const m = document.getElementById('folderPickerModal');
+  if (m) m.style.display = 'none';
+}
+
 function showFolderPicker(taskId, itemId){
+  ensureFolderModals();
   const t = tasks.find(x=>x.id===taskId); if(!t) return;
   const it = (t.items||[]).find(i=>i.id===itemId); if(!it) return;
   const folders = (t.items||[]).filter(x=>x.type==='folder');
-  const c = els.folderPickerList; c.innerHTML='';
-  if(folders.length===0){
-    const p=document.createElement('p'); p.textContent='В этой задаче пока нет папок.';
-    c.appendChild(p);
-  }else{
+
+  const modal = document.getElementById('folderPickerModal');
+  const list  = modal.querySelector('#folderPickerList');
+  list.innerHTML = '';
+
+  if (folders.length === 0) {
+    const p = document.createElement('p'); p.textContent = 'В этой задаче пока нет папок.';
+    list.appendChild(p);
+  } else {
     folders.forEach(f=>{
       const btn=document.createElement('button');
       btn.type='button'; btn.className='ghost';
       btn.textContent='📁 '+f.title;
-      btn.onclick=()=>{ it.folderId=f.id; save(); hideFolderPicker(); renderChecklist(t); };
-      c.appendChild(btn);
+      btn.onclick=()=>{ it.folderId=f.id; save(); modal.style.display='none'; renderChecklist(t); };
+      list.appendChild(btn);
     });
   }
-  if(it.folderId){
-    const sep=document.createElement('div'); sep.style.margin='8px 0'; c.appendChild(sep);
-    const un=document.createElement('button'); un.type='button'; un.className='ghost';
-    un.textContent='⏏️ Убрать из папки';
-    un.onclick=()=>{ delete it.folderId; save(); hideFolderPicker(); renderChecklist(t); };
-    c.appendChild(un);
+
+  if (it.folderId){
+    const div=document.createElement('div'); div.style.margin='8px 0'; list.appendChild(div);
+    const un=document.createElement('button'); un.type='button'; un.className='ghost'; un.textContent='⏏️ Убрать из папки';
+    un.onclick=()=>{ delete it.folderId; save(); modal.style.display='none'; renderChecklist(t); };
+    list.appendChild(un);
   }
-  els.folderPickerModal.classList.remove('hidden');
+
+  modal.style.display='flex';
 }
-els.folderPickerClose && (els.folderPickerClose.onclick=hideFolderPicker);
 
 function openFolderView(taskId, folderId){
+  ensureFolderModals();
   const t = tasks.find(x=>x.id===taskId); if(!t) return;
   const f = (t.items||[]).find(i=>i.id===folderId && i.type==='folder'); if(!f) return;
-  els.folderViewTitle.textContent = f.title;
-  const list = els.folderViewList; list.innerHTML='';
+
+  const modal = document.getElementById('folderViewModal');
+  const title = modal.querySelector('#folderViewTitle');
+  const list  = modal.querySelector('#folderViewList');
+  title.textContent = f.title;
+  list.innerHTML = '';
+
   const arr = (t.items||[]).filter(x=>x.type!=='folder' && x.folderId===f.id);
-  if(arr.length===0){
+  if (arr.length===0){
     const li=document.createElement('li'); li.className='row';
-    const sp=document.createElement('div'); const title=document.createElement('div'); title.className='title'; title.textContent='Пусто';
-    const ac=document.createElement('div'); ac.className='actions'; li.append(sp,title,ac); list.append(li);
-  }else{
+    const sp=document.createElement('div');
+    const tt=document.createElement('div'); tt.className='title'; tt.textContent='Пусто';
+    const ac=document.createElement('div'); ac.className='actions';
+    li.append(sp, tt, ac); list.append(li);
+  } else {
     arr.forEach(it=>{
       const li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
       const sp=document.createElement('div');
-      const title=document.createElement('div'); title.className='title'; title.textContent=it.title;
+      const tt=document.createElement('div'); tt.className='title'; tt.textContent=it.title;
       const ac=document.createElement('div'); ac.className='actions';
-      // кнопка открыть примечание
-      const open=ghost('↗️', ()=>{ location.hash = '#/note/'+t.id+'/'+it.id; els.folderViewModal.classList.add('hidden'); });
+      const open=ghost('↗️', ()=>{ location.hash = '#/note/'+t.id+'/'+it.id; modal.style.display='none'; });
       ac.append(open);
-      li.append(sp,title,ac);
+      li.append(sp, tt, ac);
       list.append(li);
     });
   }
-  els.folderViewModal.classList.remove('hidden');
+  modal.style.display='flex';
 }
-els.folderViewClose && (els.folderViewClose.onclick=()=> els.folderViewModal.classList.add('hidden'));
