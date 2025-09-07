@@ -176,7 +176,9 @@ function editItem(taskId, itemId){
   it.title=v.trim()||it.title; save(); renderChecklist(t);
 }
 function removeItem(taskId, itemId){
-  showConfirm('Удалить подзадачу?', ()=>{
+  showConfirm(
+    confirmDeleteText(tasks.find(x=>x.id===taskId).items.find(i=>i.id===itemId)),
+    ()=>{
     const t=tasks.find(x=>x.id===taskId); if(!t) return;
     t.items=(t.items||[]).filter(s=>s.id!==itemId);
     t.done = (t.items||[]).length>0 ? (t.items||[]).every(x=>x.done) : t.done;
