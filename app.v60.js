@@ -2,7 +2,7 @@
 const storeKey='minimal_tasks_v45';
 let tasks=[];
 try{ tasks=JSON.parse(localStorage.getItem(storeKey)||'[]'); }catch{ tasks=[]; }
-for(const t of tasks){ if(typeof t.done!=='boolean') t.done=false; if(!Array.isArray(t.items)) t.items=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; if(!it.type) it.type='item'; } }
+for(const t of tasks){ if(typeof t.done!=='boolean') t.done=false; if(!Array.isArray(t.items)) t.items=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; } }
 
 const els={
   appTitle: document.getElementById('appTitle'),
@@ -51,15 +51,6 @@ const els={
   paramLandscape: document.getElementById('paramLandscape'),
   paramsCancel: document.getElementById('paramsCancel'),
   paramsCreate: document.getElementById('paramsCreate'),
-,
-  folder:document.getElementById('view-folder'),
-  backFromFolder:document.getElementById('backFromFolder'),
-  deleteFolderBtn:document.getElementById('deleteFolderBtn'),
-  folderTitle:document.getElementById('folderTitle'),
-  folderItemInput:document.getElementById('folderItemInput'),
-  folderItemAdd:document.getElementById('folderItemAdd'),
-  folderList:document.getElementById('folderList'),
-  folderEmpty:document.getElementById('folderEmpty')
 };
 
 function save(){ localStorage.setItem(storeKey, JSON.stringify(tasks)); }
@@ -151,12 +142,21 @@ function showDetail(taskId){
   els.viewDetail.hidden=false; els.appTitle.textContent='Подзадачи';
   els.taskHeader.textContent=t.title;
   els.pdfBtn.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); showPdfChoice(t); };
-  els.renameTaskBtn.onclick=()=> createFolder(t.id);
+  els.renameTaskBtn.onclick=()=> renameTask(t.id);
+  // inject Add Folder button next to Rename
+  if(!els.addFolderBtn){
+    try{
+      const btn=document.createElement('button'); btn.type='button'; btn.id='addFolderBtn'; btn.textContent='📁 Папка';
+      btn.className='ghost'; btn.onclick=()=> current && current.task && createFolder(current.task.id);
+      els.renameTaskBtn.parentElement && els.renameTaskBtn.parentElement.insertBefore(btn, els.renameTaskBtn.nextSibling);
+      els.addFolderBtn = btn;
+    }catch(e){}
+  }
   els.deleteTaskBtn.onclick=()=> removeTask(t.id);
 
   renderChecklist(t);
 
-  els.addSub.onsubmit=(e)=>{ e.preventDefault(); const v=els.subTitle.value.trim(); if(!v) return; (t.items ||= []).push({id:uid(), title:v, done:false, note:'', notePhotoKeys:[], folderId:null, type:'item'}); t.done=false; save(); setTabLabels(); els.subTitle.value=''; renderChecklist(t); };
+  els.addSub.onsubmit=(e)=>{ e.preventDefault(); const v=els.subTitle.value.trim(); if(!v) return; (t.items ||= []).push({id:uid(), title:v, done:false, note:'', notePhotoKeys:[]}); t.done=false; save(); setTabLabels(); els.subTitle.value=''; renderChecklist(t); };
 }
 
 function renderChecklist(t){
@@ -169,7 +169,7 @@ function renderChecklist(t){
     const title=document.createElement('div'); title.className='title'; title.textContent=it.title;
     const actions=document.createElement('div'); actions.className='actions';
     const attachBtn=ghost('📎', ()=> attachPhoto(t.id, it.id));
-    const editBtn=ghost('📁', ()=> assignFolder(t.id, it.id));
+    const editBtn=ghost('✏️', ()=> editItem(t.id, it.id));
     const delBtn=ghost('🗑️', ()=> removeItem(t.id, it.id));
     actions.append(attachBtn, editBtn, delBtn);
     actions.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); });
@@ -505,63 +505,26 @@ function showChecklistParams(task){
   }
 })();
 
-// --- v61 simple folders as rows ---
 function createFolder(taskId){
   const t = tasks.find(x=>x.id===taskId); if(!t) return;
   const name = prompt('Название новой папки','');
   if(!name) return;
-  t.items.push({id:uid(), title:String(name).trim(), type:'folder'});
-  save();
-  renderChecklist(t);
+  if(!Array.isArray(t.items)) t.items=[];
+  t.items.push({ id: uid(), title: String(name).trim(), type: 'folder' });
+  save(); renderChecklist(t);
 }
+
 function folderRow(t,it){
   const li=document.createElement('li'); li.className='row folder-row'; li.dataset.id=it.id;
-  const spacer=document.createElement('div');
+  const spacer=document.createElement('div'); // align with checkbox column
   const title=document.createElement('div'); title.className='title'; title.textContent='📁 '+it.title;
   const actions=document.createElement('div'); actions.className='actions';
-  const del=ghost('🗑️', ()=>{ if((t.items||[]).some(x=>x.folderId===it.id)){ alert('Сначала уберите элементы из папки'); return; } if(!confirm('Удалить папку «'+it.title+'»?')) return; t.items=t.items.filter(x=>x.id!==it.id); save(); renderChecklist(t); });
+  const del=ghost('🗑️', ()=>{
+    if((t.items||[]).some(x=>x.folderId===it.id)){ alert('Сначала уберите подзадачи из папки'); return; }
+    if(!confirm('Удалить папку «'+it.title+'»?')) return;
+    t.items = t.items.filter(x=>x.id!==it.id); save(); renderChecklist(t);
+  });
   actions.append(del);
   li.append(spacer,title,actions);
   return li;
 }
-function assignFolder(taskId,itemId){
-  const t = tasks.find(x=>x.id===taskId); if(!t) return;
-  const folders=(t.items||[]).filter(x=>x.type==='folder');
-  if(!folders.length){ return; }
-  const it=(t.items||[]).find(i=>i.id===itemId); if(!it) return;
-  const list=folders.map((f,i)=> (i+1)+'. '+f.title).join('\n');
-  const pick=prompt('Выберите папку:\n'+list+'\n0 — Без папки','0');
-  const n=Number(pick||'0');
-  if(!isFinite(n)) return;
-  if(n<=0){ it.folderId=null; } else { const f=folders[n-1]; if(f) it.folderId=f.id; }
-  save();
-  renderChecklist(t);
-}
-
-function openFolder(taskId, folderId){
-  const t = tasks.find(x=>x.id===taskId); if(!t){ setView('task'); return; }
-  const f = (t.items||[]).find(x=>x.id===folderId && x.type==='folder'); if(!f){ openTask(taskId); return; }
-  window.current = window.current || {}; current.task=t; current.folder=f;
-  els.folderTitle.textContent = f.title;
-  renderFolderList(t,f);
-  setView('folder');
-}
-function renderFolderList(t,f){
-  const list=els.folderList; list.innerHTML='';
-  const arr=(t.items||[]).filter(x=>x.type!=='folder' && x.folderId===f.id);
-  els.folderEmpty.style.display = arr.length? 'none':'block';
-  arr.forEach(it=> list.appendChild(itemRow(t,it)));
-}
-els.backFromFolder.onclick = ()=>{ location.hash = '#/task/'+(current && current.task ? current.task.id : ''); };
-els.folderItemAdd.onclick = ()=>{
-  const t=current.task, f=current.folder; if(!t||!f) return;
-  const v=(els.folderItemInput.value||'').trim(); if(!v) return;
-  (t.items=t.items||[]).push({id:uid(), title:v, done:false, note:'', photos:[], folderId:f.id, type:'item'});
-  els.folderItemInput.value=''; save(); renderFolderList(t,f); renderChecklist(t);
-};
-els.deleteFolderBtn.onclick = ()=>{
-  const t=current.task, f=current.folder; if(!t||!f) return;
-  if((t.items||[]).some(x=>x.folderId===f.id)){ alert('Сначала уберите подзадачи из папки'); return; }
-  if(!confirm('Удалить папку «'+f.title+'»?')) return;
-  t.items=t.items.filter(x=>x.id!==f.id); save(); setView('task'); renderChecklist(t);
-};
