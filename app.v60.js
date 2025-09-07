@@ -2,7 +2,7 @@
 const storeKey='minimal_tasks_v45';
 let tasks=[];
 try{ tasks=JSON.parse(localStorage.getItem(storeKey)||'[]'); }catch{ tasks=[]; }
-for(const t of tasks){ if(typeof t.done!=='boolean') t.done=false; if(!Array.isArray(t.items)) t.items=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; if(!it.type) it.type='item'; if(!it.type) it.type='item'; if(!it.type) it.type='item'; if(!it.type) it.type='item'; } }
+for(const t of tasks){ if(typeof t.done!=='boolean') t.done=false; if(!Array.isArray(t.items)) t.items=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; if(!it.type) it.type='item'; } }
 
 const els={
   appTitle: document.getElementById('appTitle'),
@@ -51,15 +51,6 @@ const els={
   paramLandscape: document.getElementById('paramLandscape'),
   paramsCancel: document.getElementById('paramsCancel'),
   paramsCreate: document.getElementById('paramsCreate'),
-,
-  folder:document.getElementById('view-folder'),
-  backFromFolder:document.getElementById('backFromFolder'),
-  deleteFolderBtn:document.getElementById('deleteFolderBtn'),
-  folderTitle:document.getElementById('folderTitle'),
-  folderItemInput:document.getElementById('folderItemInput'),
-  folderItemAdd:document.getElementById('folderItemAdd'),
-  folderList:document.getElementById('folderList'),
-  folderEmpty:document.getElementById('folderEmpty')
 };
 
 function save(){ localStorage.setItem(storeKey, JSON.stringify(tasks)); }
@@ -185,7 +176,7 @@ function editItem(taskId, itemId){
   it.title=v.trim()||it.title; save(); renderChecklist(t);
 }
 function removeItem(taskId, itemId){
-  showConfirm('Удалить папку?', ()=>{
+  showConfirm('Удалить подзадачу?', ()=>{
     const t=tasks.find(x=>x.id===taskId); if(!t) return;
     t.items=(t.items||[]).filter(s=>s.id!==itemId);
     t.done = (t.items||[]).length>0 ? (t.items||[]).every(x=>x.done) : t.done;
@@ -537,81 +528,3 @@ function assignFolder(taskId,itemId){
   save();
   renderChecklist(t);
 }
-
-// --- Folder inner screen ---
-function openFolder(taskId, folderId){
-  const t = tasks.find(x=>x.id===taskId); if(!t){ setView('task'); return; }
-  const f = (t.items||[]).find(x=>x.id===folderId && x.type==='folder'); if(!f){ openTask(taskId); return; }
-  current.task=t; current.folder=f; // reuse current if your app has it; otherwise create
-  els.folderTitle.textContent = f.title;
-  setView('folder');
-  renderFolderList(t,f);
-}
-function renderFolderList(t,f){
-  const list=els.folderList; list.innerHTML='';
-  const arr=(t.items||[]).filter(x=>x.type!=='folder' && x.folderId===f.id);
-  els.folderEmpty.style.display = arr.length? 'none':'block';
-  arr.forEach(it=>{
-    const li=itemRow(t,it); // reuse item row
-    list.appendChild(li);
-  });
-}
-
-// Folder events
-els.backFromFolder.onclick = ()=>{ setView('task'); renderChecklist(current.task); };
-els.folderItemAdd.onclick = ()=>{
-  const t=current.task, f=current.folder; if(!t||!f) return;
-  const v=(els.folderItemInput.value||'').trim(); if(!v) return;
-  t.items.push({id:uid(), title:v, done:false, note:'', photos:[], folderId:f.id, type:'item'});
-  els.folderItemInput.value=''; save(); renderFolderList(t,f); renderChecklist(t);
-};
-els.deleteFolderBtn.onclick = ()=>{
-  const t=current.task, f=current.folder; if(!t||!f) return;
-  if((t.items||[]).some(x=>x.folderId===f.id)){ alert('Сначала уберите подзадачи из папки'); return; }
-  if(!confirm('Удалить папку «'+f.title+'»?')) return;
-  t.items=t.items.filter(x=>x.id!==f.id); save(); setView('task'); renderChecklist(t);
-};
-
-// ensure folders are rendered via folderRow, not itemRow
-(function(){
-  if(typeof window.itemRow==='function'){
-    const _itemRow = window.itemRow;
-    window.itemRow = function(t,it){
-      try{
-        if(it && it.type==='folder') return folderRow(t,it);
-      }catch(e){}
-      return _itemRow.call(this,t,it);
-    };
-  }
-})();
-// block accidental navigation to note from folder rows
-try{
-  if(els && els.checkList){
-    els.checkList.addEventListener('click', function(e){
-      const li = e.target && e.target.closest && e.target.closest('li.folder-row');
-      if(li){ e.stopPropagation(); }
-    }, true);
-  }
-}catch(_){}
-
-function handleHash(){
-  const raw=(location.hash||'').slice(1);
-  const p=raw.split('/').filter(Boolean);
-  if(p.length===0){ setView('list'); return; }
-  switch(p[0]){
-    case 'list':   setView('list'); break;
-    case 'task':   openTask(p[1]); break;
-    case 'note':   openNote(p[1], p[2]); break;
-    case 'folder': openFolder(p[1], p[2]); break;
-    default:       setView('list');
-  }
-}
-// BOOT_DEFAULT_ROUTE
-try{
-  window.addEventListener('hashchange', handleHash);
-  document.addEventListener('DOMContentLoaded', function(){
-    try{ current = current || {}; current.folder = null; }catch(e){}
-    if(!location.hash) location.hash = '#/list';
-    handleHash();
-  });
-}catch(e){}
