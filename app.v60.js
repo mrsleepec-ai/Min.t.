@@ -2,7 +2,7 @@
 const storeKey='minimal_tasks_v45';
 let tasks=[];
 try{ tasks=JSON.parse(localStorage.getItem(storeKey)||'[]'); }catch{ tasks=[]; }
-for(const t of tasks){ if(typeof t.done!=='boolean') t.done=false; if(!Array.isArray(t.items)) t.items=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; if(!it.type) it.type='item'; } }
+for(const t of tasks){ if(typeof t.done!=='boolean') t.done=false; if(!Array.isArray(t.items)) t.items=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; if(!it.type) it.type='item'; if(!it.type) it.type='item'; } }
 
 const els={
   appTitle: document.getElementById('appTitle'),
@@ -150,13 +150,33 @@ function showDetail(taskId){
   els.addSub.onsubmit=(e)=>{ e.preventDefault(); const v=els.subTitle.value.trim(); if(!v) return; (t.items ||= []).push({id:uid(), title:v, done:false, note:'', notePhotoKeys:[], folderId:null, type:'item'}); t.done=false; save(); setTabLabels(); els.subTitle.value=''; renderChecklist(t); };
 }
 
+
 function renderChecklist(t){
-  const items = t.items || [];
-  els.checkList.innerHTML=''; els.emptyCheck.hidden = items.length>0;
-  for(const it of items){
-    const li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
-    const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!it.done;
-    cb.addEventListener('change', e=>{ e.preventDefault(); e.stopPropagation(); it.done=cb.checked; const allDone=(t.items||[]).length>0 && (t.items||[]).every(x=>x.done); t.done=allDone; save(); setTabLabels(); });
+  const ul = els.checkList; ul.innerHTML='';
+  const items = (t.items||[]);
+  const folders = items.filter(it=>it.type==='folder');
+  const subs = items.filter(it=>it.type!=='folder');
+  // draw folders
+  for(const f of folders){
+    ul.appendChild(folderRow(t,f));
+    // draw items inside this folder
+    const inside = subs.filter(x=>x.folderId===f.id);
+    for(const it of inside){
+      ul.appendChild(itemRow(t,it));
+    }
+  }
+  // ungrouped items
+  const un = subs.filter(x=>!x.folderId);
+  for(const it of un){
+    ul.appendChild(itemRow(t,it));
+  }
+  els.emptyCheck.hidden = items.length>0 ? true : false;
+  // task done is only based on real items (not folders)
+  t.done = subs.length>0 && subs.every(x=>x.done);
+  save();
+  if(typeof setTabLabels==='function') try{ setTabLabels(); }catch(e){}
+}
+);
     const title=document.createElement('div'); title.className='title'; title.textContent=it.title;
     const actions=document.createElement('div'); actions.className='actions';
     const attachBtn=ghost('📎', ()=> attachPhoto(t.id, it.id));
