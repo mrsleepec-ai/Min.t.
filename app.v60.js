@@ -151,10 +151,7 @@ function showDetail(taskId){
 }
 
 function renderChecklist(t){
-  
-  // render folders as rows first
-  try{ renderFolderRows(t, els.checkList); }catch(e){}
-const items = t.items || [];
+  const items = t.items || [];
   els.checkList.innerHTML=''; els.emptyCheck.hidden = items.length>0;
   for(const it of items){
     const li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
@@ -499,7 +496,7 @@ function showChecklistParams(task){
   }
 })();
 
-// --- v61 folders rendered as rows ---
+// --- v61 folders rendered as rows (fix) ---
 function createFolder(taskId){
   const t = tasks.find(x=>x.id===taskId); if(!t) return;
   if(!Array.isArray(t.folders)) t.folders=[];
@@ -510,21 +507,20 @@ function createFolder(taskId){
   if(current.task && current.task.id===taskId){ renderChecklist(t); }
 }
 function renderFolderRows(t, ul){
-  // show every folder as a normal row item (title + count + delete)
   (t.folders||[]).forEach(f=>{
     const li=document.createElement('li'); li.className='row folder-row'; li.dataset.folderId=f.id;
-    const ico=document.createElement('div'); // spacer to align with checkbox spot
+    const spacer=document.createElement('div');
     const title=document.createElement('div'); title.className='title'; title.textContent='📁 '+f.title+' ('+(t.items||[]).filter(x=>x.folderId===f.id).length+')';
     const actions=document.createElement('div'); actions.className='actions';
     const del=ghost('🗑️', ()=>{ if((t.items||[]).some(x=>x.folderId===f.id)){ alert('Сначала уберите элементы из папки'); return; } if(!confirm('Удалить папку «'+f.title+'»?')) return; t.folders=t.folders.filter(x=>x.id!==f.id); save(); renderChecklist(t); });
     actions.append(del);
-    li.append(ico,title,actions);
+    li.append(spacer,title,actions);
     ul.append(li);
   });
 }
 function assignFolder(taskId, itemId){
   const t = tasks.find(x=>x.id===taskId); if(!t) return;
-  if(!Array.isArray(t.folders) || t.folders.length===0){ return; } // нет папок — ничего не делаем
+  if(!Array.isArray(t.folders) || t.folders.length===0){ return; }
   const it = (t.items||[]).find(i=>i.id===itemId); if(!it) return;
   const list = t.folders.map((f,i)=> (i+1)+'. '+f.title).join('\n');
   const pick = prompt('Выберите папку:\n'+list+'\n0 — Без папки','0');
