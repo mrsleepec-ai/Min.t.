@@ -143,15 +143,6 @@ function showDetail(taskId){
   els.taskHeader.textContent=t.title;
   els.pdfBtn.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); showPdfChoice(t); };
   els.renameTaskBtn.onclick=()=> renameTask(t.id);
-  // inject Add Folder button next to Rename
-  if(!els.addFolderBtn){
-    try{
-      const btn=document.createElement('button'); btn.type='button'; btn.id='addFolderBtn'; btn.textContent='📁 Папка';
-      btn.className='ghost'; btn.onclick=()=> current && current.task && createFolder(current.task.id);
-      els.renameTaskBtn.parentElement && els.renameTaskBtn.parentElement.insertBefore(btn, els.renameTaskBtn.nextSibling);
-      els.addFolderBtn = btn;
-    }catch(e){}
-  }
   els.deleteTaskBtn.onclick=()=> removeTask(t.id);
 
   renderChecklist(t);
@@ -509,62 +500,41 @@ function createFolder(taskId){
   const t = tasks.find(x=>x.id===taskId); if(!t) return;
   const name = prompt('Название новой папки','');
   if(!name) return;
-  if(!Array.isArray(t.items)) t.items=[];
-  t.items.push({ id: uid(), title: String(name).trim(), type: 'folder' });
+  (t.items=t.items||[]).push({id:uid(), title:String(name).trim(), type:'folder'});
   save(); renderChecklist(t);
 }
 
+// ensure single Add Folder button next to Rename
+function ensureFolderBtn(taskId){
+  if(!els || !els.renameTaskBtn) return;
+  let btn=document.getElementById('addFolderBtn');
+  if(!btn){
+    btn=document.createElement('button');
+    btn.type='button'; btn.id='addFolderBtn'; btn.className='ghost'; btn.textContent='📁 Папка';
+    const host=els.renameTaskBtn.parentElement || els.renameTaskBtn.closest('.inputrow') || els.renameTaskBtn.parentNode;
+    if(host) host.insertBefore(btn, els.renameTaskBtn.nextSibling);
+  }
+  btn.onclick=()=> createFolder(taskId || (current&&current.task&&current.task.id));
+}
+(function(){
+  if(typeof openTask==='function'){
+    const _openTask=openTask;
+    window.openTask=function(taskId){ const r=_openTask.apply(this,arguments); try{ensureFolderBtn(taskId);}catch(e){} return r; };
+  }else{
+    document.addEventListener('DOMContentLoaded',()=>{ try{ensureFolderBtn();}catch(e){} });
+  }
+})();
 function folderRow(t,it){
-  const li=document.createElement('li'); li.className='row folder-row'; li.dataset.id=it.id;
-  const spacer=document.createElement('div'); // align with checkbox column
+  const li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
+  const spacer=document.createElement('div');
   const title=document.createElement('div'); title.className='title'; title.textContent='📁 '+it.title;
   const actions=document.createElement('div'); actions.className='actions';
   const del=ghost('🗑️', ()=>{
     if((t.items||[]).some(x=>x.folderId===it.id)){ alert('Сначала уберите подзадачи из папки'); return; }
     if(!confirm('Удалить папку «'+it.title+'»?')) return;
-    t.items = t.items.filter(x=>x.id!==it.id); save(); renderChecklist(t);
+    t.items=t.items.filter(x=>x.id!==it.id); save(); renderChecklist(t);
   });
   actions.append(del);
   li.append(spacer,title,actions);
   return li;
 }
-
-// --- Ensure "📁 Папка" button exists and works ---
-function ensureFolderButton(taskId){
-  try{
-    if(!els || !els.renameTaskBtn) return;
-    // if button already present, just (re)wire it
-    let btn = document.getElementById('addFolderBtn');
-    if(!btn){
-      btn = document.createElement('button');
-      btn.type = 'button';
-      btn.id = 'addFolderBtn';
-      btn.className = 'ghost';
-      btn.textContent = '📁 Папка';
-      if(els.renameTaskBtn.parentElement){
-        els.renameTaskBtn.parentElement.insertBefore(btn, els.renameTaskBtn.nextSibling);
-      }
-    }
-    btn.onclick = function(){
-      const tId = taskId || (window.current && current.task && current.task.id);
-      if(!tId) return;
-      if(typeof createFolder === 'function') createFolder(tId);
-    };
-  }catch(e){}
-}
-
-// Patch openTask to inject the button every time
-(function(){
-  if(typeof window.openTask === 'function'){
-    const _openTask = window.openTask;
-    window.openTask = function(taskId){
-      const r = _openTask.apply(this, arguments);
-      try{ ensureFolderButton(taskId); }catch(e){}
-      return r;
-    };
-  } else {
-    document.addEventListener('DOMContentLoaded', function(){
-      try{ ensureFolderButton(); }catch(e){}
-    });
-  }
-})();
