@@ -56,6 +56,14 @@ const els={
   paramLandscape: document.getElementById('paramLandscape'),
   paramsCancel: document.getElementById('paramsCancel'),
   paramsCreate: document.getElementById('paramsCreate'),
+,
+  folderPickerModal:document.getElementById('folderPickerModal'),
+  folderPickerList:document.getElementById('folderPickerList'),
+  folderPickerClose:document.getElementById('folderPickerClose'),
+  folderViewModal:document.getElementById('folderViewModal'),
+  folderViewTitle:document.getElementById('folderViewTitle'),
+  folderViewList:document.getElementById('folderViewList'),
+  folderViewClose:document.getElementById('folderViewClose')
 };
 
 function save(){ localStorage.setItem(storeKey, JSON.stringify(tasks)); }
@@ -564,3 +572,61 @@ document.addEventListener('click', function(e){
 }, true);
 
 
+
+
+// --- Folder move & view ---
+function hideFolderPicker(){ els.folderPickerModal.classList.add('hidden'); }
+function showFolderPicker(taskId, itemId){
+  const t = tasks.find(x=>x.id===taskId); if(!t) return;
+  const it = (t.items||[]).find(i=>i.id===itemId); if(!it) return;
+  const folders = (t.items||[]).filter(x=>x.type==='folder');
+  const c = els.folderPickerList; c.innerHTML='';
+  if(folders.length===0){
+    const p=document.createElement('p'); p.textContent='В этой задаче пока нет папок.';
+    c.appendChild(p);
+  }else{
+    folders.forEach(f=>{
+      const btn=document.createElement('button');
+      btn.type='button'; btn.className='ghost';
+      btn.textContent='📁 '+f.title;
+      btn.onclick=()=>{ it.folderId=f.id; save(); hideFolderPicker(); renderChecklist(t); };
+      c.appendChild(btn);
+    });
+  }
+  if(it.folderId){
+    const sep=document.createElement('div'); sep.style.margin='8px 0'; c.appendChild(sep);
+    const un=document.createElement('button'); un.type='button'; un.className='ghost';
+    un.textContent='⏏️ Убрать из папки';
+    un.onclick=()=>{ delete it.folderId; save(); hideFolderPicker(); renderChecklist(t); };
+    c.appendChild(un);
+  }
+  els.folderPickerModal.classList.remove('hidden');
+}
+els.folderPickerClose && (els.folderPickerClose.onclick=hideFolderPicker);
+
+function openFolderView(taskId, folderId){
+  const t = tasks.find(x=>x.id===taskId); if(!t) return;
+  const f = (t.items||[]).find(i=>i.id===folderId && i.type==='folder'); if(!f) return;
+  els.folderViewTitle.textContent = f.title;
+  const list = els.folderViewList; list.innerHTML='';
+  const arr = (t.items||[]).filter(x=>x.type!=='folder' && x.folderId===f.id);
+  if(arr.length===0){
+    const li=document.createElement('li'); li.className='row';
+    const sp=document.createElement('div'); const title=document.createElement('div'); title.className='title'; title.textContent='Пусто';
+    const ac=document.createElement('div'); ac.className='actions'; li.append(sp,title,ac); list.append(li);
+  }else{
+    arr.forEach(it=>{
+      const li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
+      const sp=document.createElement('div');
+      const title=document.createElement('div'); title.className='title'; title.textContent=it.title;
+      const ac=document.createElement('div'); ac.className='actions';
+      // кнопка открыть примечание
+      const open=ghost('↗️', ()=>{ location.hash = '#/note/'+t.id+'/'+it.id; els.folderViewModal.classList.add('hidden'); });
+      ac.append(open);
+      li.append(sp,title,ac);
+      list.append(li);
+    });
+  }
+  els.folderViewModal.classList.remove('hidden');
+}
+els.folderViewClose && (els.folderViewClose.onclick=()=> els.folderViewModal.classList.add('hidden'));
