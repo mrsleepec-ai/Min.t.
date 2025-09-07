@@ -131,7 +131,22 @@
       </header>
       <iframe id="pdfFrame" title="Просмотр PDF/печати"></iframe>
     </div>
-    </main>
+    
+  <!-- FOLDER inner screen -->
+  <section id="view-folder" class="card hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <button type="button" class="ghost" id="backFromFolder">← Подзадачи</button>
+      <button type="button" class="ghost" id="deleteFolderBtn">🗑️ Удалить папку</button>
+    </div>
+    <h3 id="folderTitle" style="margin:4px 0 10px"></h3>
+    <div class="inputrow">
+      <input id="folderItemInput" type="text" maxlength="160" placeholder="Добавить подзадачу в эту папку…">
+      <button type="button" id="folderItemAdd">Добавить</button>
+    </div>
+    <ul id="folderList" class="list"></ul>
+    <div id="folderEmpty" class="muted">В папке пока пусто.</div>
+  </section>
+</main>
 
   <!-- Confirm modal -->
   <div id="confirmModal" class="modal">

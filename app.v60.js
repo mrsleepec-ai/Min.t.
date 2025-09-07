@@ -51,6 +51,15 @@ const els={
   paramLandscape: document.getElementById('paramLandscape'),
   paramsCancel: document.getElementById('paramsCancel'),
   paramsCreate: document.getElementById('paramsCreate'),
+,
+  folder:document.getElementById('view-folder'),
+  backFromFolder:document.getElementById('backFromFolder'),
+  deleteFolderBtn:document.getElementById('deleteFolderBtn'),
+  folderTitle:document.getElementById('folderTitle'),
+  folderItemInput:document.getElementById('folderItemInput'),
+  folderItemAdd:document.getElementById('folderItemAdd'),
+  folderList:document.getElementById('folderList'),
+  folderEmpty:document.getElementById('folderEmpty')
 };
 
 function save(){ localStorage.setItem(storeKey, JSON.stringify(tasks)); }
@@ -529,41 +538,36 @@ function assignFolder(taskId,itemId){
   renderChecklist(t);
 }
 
-// --- v61 grouped renderer (fixed) ---
-function drawChecklistGrouped(t){
-  const ul = els.checkList; ul.innerHTML='';
-  const items = (t.items||[]);
-  const folders = items.filter(it=>it.type==='folder');
-  const subs = items.filter(it=>it.type!=='folder');
-  // render folders with their items
-  for(const f of folders){
-    ul.appendChild(folderRow(t,f));
-    for(const it of subs){ if(it.folderId===f.id){ ul.appendChild(itemRow(t,it)); } }
-  }
-  // ungrouped items
-  for(const it of subs){ if(!it.folderId){ ul.appendChild(itemRow(t,it)); } }
-  els.emptyCheck.hidden = items.length>0;
-  t.done = subs.length>0 && subs.every(x=>x.done);
-  try{ save(); if(typeof setTabLabels==='function') setTabLabels(); }catch(e){}
+// --- Folder inner screen ---
+function openFolder(taskId, folderId){
+  const t = tasks.find(x=>x.id===taskId); if(!t){ setView('task'); return; }
+  const f = (t.items||[]).find(x=>x.id===folderId && x.type==='folder'); if(!f){ openTask(taskId); return; }
+  current.task=t; current.folder=f; // reuse current if your app has it; otherwise create
+  els.folderTitle.textContent = f.title;
+  setView('folder');
+  renderFolderList(t,f);
 }
-(function(){
-  var _origRC = window.renderChecklist;
-  if(typeof _origRC==='function'){
-    window.renderChecklist = function(t){
-      try{ drawChecklistGrouped(t); } catch(e){ console.error(e); try{ _origRC(t); }catch(_e){} }
-    };
-  }
-})();
+function renderFolderList(t,f){
+  const list=els.folderList; list.innerHTML='';
+  const arr=(t.items||[]).filter(x=>x.type!=='folder' && x.folderId===f.id);
+  els.folderEmpty.style.display = arr.length? 'none':'block';
+  arr.forEach(it=>{
+    const li=itemRow(t,it); // reuse item row
+    list.appendChild(li);
+  });
+}
 
-// --- force folders to render via folderRow ---
-(function(){
-  if(typeof window.itemRow==='function'){
-    const _origItemRow = window.itemRow;
-    window.itemRow = function(t,it){
-      try{
-        if(it && it.type==='folder') return folderRow(t,it);
-      }catch(e){}
-      return _origItemRow.call(this,t,it);
-    };
-  }
-})();
+// Folder events
+els.backFromFolder.onclick = ()=>{ setView('task'); renderChecklist(current.task); };
+els.folderItemAdd.onclick = ()=>{
+  const t=current.task, f=current.folder; if(!t||!f) return;
+  const v=(els.folderItemInput.value||'').trim(); if(!v) return;
+  t.items.push({id:uid(), title:v, done:false, note:'', photos:[], folderId:f.id, type:'item'});
+  els.folderItemInput.value=''; save(); renderFolderList(t,f); renderChecklist(t);
+};
+els.deleteFolderBtn.onclick = ()=>{
+  const t=current.task, f=current.folder; if(!t||!f) return;
+  if((t.items||[]).some(x=>x.folderId===f.id)){ alert('Сначала уберите подзадачи из папки'); return; }
+  if(!confirm('Удалить папку «'+f.title+'»?')) return;
+  t.items=t.items.filter(x=>x.id!==f.id); save(); setView('task'); renderChecklist(t);
+};
