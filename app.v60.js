@@ -554,3 +554,16 @@ function drawChecklistGrouped(t){
     };
   }
 })();
+
+// --- force folders to render via folderRow ---
+(function(){
+  if(typeof window.itemRow==='function'){
+    const _origItemRow = window.itemRow;
+    window.itemRow = function(t,it){
+      try{
+        if(it && it.type==='folder') return folderRow(t,it);
+      }catch(e){}
+      return _origItemRow.call(this,t,it);
+    };
+  }
+})();
