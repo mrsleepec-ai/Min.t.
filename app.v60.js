@@ -164,7 +164,7 @@ function renderChecklist(t){
     const delBtn=ghost('🗑️', ()=> removeItem(t.id, it.id));
     actions.append(attachBtn, editBtn, delBtn);
     actions.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); });
-    const link=document.createElement('a'); link.className='row-link'; if(it.type!=='folder') { link.href='#/note/'+t.id+'/'+it.id; }
+    const link=document.createElement('a'); link.className='row-link'; link.href='#/note/'+t.id+'/'+it.id;
     li.append(cb,title,actions,link);
     els.checkList.append(li);
   }
@@ -506,32 +506,13 @@ function createFolder(taskId){
   renderChecklist(t);
 }
 function folderRow(t,it){
-  const li=document.createElement('li'); li.className='row folder-row';
-  try{ li.dataset.id=it.id; li.dataset.taskId=t.id; }catch(_){}
+  const li=document.createElement('li'); li.className='row folder-row'; li.dataset.id=it.id;
   const spacer=document.createElement('div');
-  const title=document.createElement('div'); title.className='title'; title.textContent='📁 '+(it.title||'Папка');
+  const title=document.createElement('div'); title.className='title'; title.textContent='📁 '+it.title;
   const actions=document.createElement('div'); actions.className='actions';
-  const del=ghost('🗑️', ()=>{
-    try{
-      if((t.items||[]).some(x=>x.folderId===it.id)){ alert('Сначала уберите подзадачи из папки'); return; }
-      if(!confirm('Удалить папку «'+(it.title||'Папка')+'»?')) return;
-      t.items=t.items.filter(x=>x.id!==it.id); save && save(); if(typeof renderChecklist==='function') renderChecklist(t);
-    }catch(e){ console.error(e); }
-  });
+  const del=ghost('🗑️', ()=>{ if((t.items||[]).some(x=>x.folderId===it.id)){ alert('Сначала уберите элементы из папки'); return; } if(!confirm('Удалить папку «'+it.title+'»?')) return; t.items=t.items.filter(x=>x.id!==it.id); save(); renderChecklist(t); });
   actions.append(del);
   li.append(spacer,title,actions);
-  return li;
-}
-    if(!confirm('Удалить папку «'+it.title+'»?')) return;
-    t.items=t.items.filter(x=>x.id!==it.id); save(); renderChecklist(t);
-  });
-  actions.append(del);
-  // click handled by delegated listener
-  li.append(spacer,title,actions);
-  return li;
-} if(!confirm('Удалить папку «'+it.title+'»?')) return; t.items=t.items.filter(x=>x.id!==it.id); save(); renderChecklist(t); });
-  actions.append(del);
-  li.onclick=()=>foOpen(t.id,it.id); li.append(spacer,title,actions);
   return li;
 }
 function assignFolder(taskId,itemId){
@@ -548,18 +529,17 @@ function assignFolder(taskId,itemId){
   renderChecklist(t);
 }
 
-/* WRAP itemRow for folders */
-(function(){
-  if(typeof window.itemRow==='function'){
-    const _orig = window.itemRow;
-    window.itemRow = function(t,it){
-      if(it && it.type==='folder') return folderRow(t,it);
-      return _orig.call(this,t,it);
-    };
-  }
-})();
-
-// --- Folder Overlay (no router) ---
+// --- Folder overlay (no router) ---
+const fo = {
+  root:document.getElementById('folderOverlay'),
+  back:document.getElementById('foBack'),
+  title:document.getElementById('foTitle'),
+  del:document.getElementById('foDelete'),
+  input:document.getElementById('foInput'),
+  add:document.getElementById('foAdd'),
+  list:document.getElementById('foList'),
+  empty:document.getElementById('foEmpty')
+};
 function foOpen(taskId, folderId){
   const t = tasks.find(x=>x.id===taskId); if(!t) return;
   const f = (t.items||[]).find(x=>x.id===folderId && x.type==='folder'); if(!f) return;
@@ -567,76 +547,26 @@ function foOpen(taskId, folderId){
   fo.title.textContent = f.title;
   foRender();
   fo.root.classList.remove('hidden');
-  // focus input
   try{ fo.input.focus(); }catch(e){}
 }
-function foClose(){
-  fo.root.classList.add('hidden');
-}
+function foClose(){ fo.root.classList.add('hidden'); }
 function foRender(){
   const t=current.task, f=current.folder;
   fo.list.innerHTML='';
   const arr=(t.items||[]).filter(x=>x.type!=='folder' && x.folderId===f.id);
   fo.empty.style.display = arr.length? 'none':'block';
-  arr.forEach(it=>{
-    fo.list.appendChild(itemRow(t,it));
-  });
+  arr.forEach(it=> fo.list.appendChild(itemRow(t,it)));
 }
-// events
-try{
-  fo.back.onclick = foClose;
-  fo.add.onclick = ()=>{
-    const t=current.task, f=current.folder; if(!t||!f) return;
-    const v=(fo.input.value||'').trim(); if(!v) return;
-    (t.items=t.items||[]).push({id:uid(), title:v, done:false, note:'', photos:[], folderId:f.id, type:'item'});
-    fo.input.value=''; save(); foRender(); renderChecklist && renderChecklist(t);
-  };
-  fo.del.onclick = ()=>{
-    const t=current.task, f=current.folder; if(!t||!f) return;
-    if((t.items||[]).some(x=>x.folderId===f.id)){ alert('Сначала уберите подзадачи из папки'); return; }
-    if(!confirm('Удалить папку «'+f.title+'»?')) return;
-    t.items=t.items.filter(x=>x.id!==f.id); save(); foClose(); renderChecklist && renderChecklist(t);
-  };
-}catch(e){}
-
-// DELEGATE_FOLDER_CLICK
-try{
-  if(els.checkList){
-    els.checkList.addEventListener('click', function(e){
-      const li = e.target.closest && e.target.closest('li.folder-row');
-      if(li){
-        const taskId = li.dataset.taskId;
-        const folderId = li.dataset.id;
-        if(taskId && folderId) foOpen(taskId, folderId);
-      }
-    });
-  }
-}catch(e){}
-
-// GLOBAL_FOLDER_DELEGATE
-(function(){
-  function handler(ev){
-    try{
-      var el = ev.target && ev.target.closest && ev.target.closest('li.folder-row');
-      if(!el) return;
-      var tid = el.dataset.taskId, fid = el.dataset.id;
-      if(tid && fid){ ev.preventDefault(); foOpen(tid,fid); }
-    }catch(e){}
-  }
-  document.addEventListener('click', handler, true);
-  document.addEventListener('touchstart', handler, true);
-})();
-// GLOBAL_FOLDER_DELEGATE_SAFE
-(function(){
-  function handler(ev){
-    try{
-      var el = ev.target && ev.target.closest && ev.target.closest('li.folder-row');
-      if(!el) return;
-      var tid = el.dataset && el.dataset.taskId;
-      var fid = el.dataset && el.dataset.id;
-      if(tid && fid){ ev.preventDefault(); foOpen(tid,fid); }
-    }catch(e){ console.error(e); }
-  }
-  document.addEventListener('click', handler, true);
-  document.addEventListener('touchstart', handler, true);
-})();
+fo.back.onclick = foClose;
+fo.add.onclick = ()=>{
+  const t=current.task, f=current.folder; if(!t||!f) return;
+  const v=(fo.input.value||'').trim(); if(!v) return;
+  (t.items=t.items||[]).push({id:uid(), title:v, done:false, note:'', photos:[], folderId:f.id, type:'item'});
+  fo.input.value=''; save(); foRender(); renderChecklist(t);
+};
+fo.del.onclick = ()=>{
+  const t=current.task, f=current.folder; if(!t||!f) return;
+  if((t.items||[]).some(x=>x.folderId===f.id)){ alert('Сначала уберите подзадачи из папки'); return; }
+  if(!confirm('Удалить папку «'+f.title+'»?')) return;
+  t.items=t.items.filter(x=>x.id!==it.id); save(); foClose(); renderChecklist(t);
+};
