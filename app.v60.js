@@ -2,7 +2,7 @@
 const storeKey='minimal_tasks_v45';
 let tasks=[];
 try{ tasks=JSON.parse(localStorage.getItem(storeKey)||'[]'); }catch{ tasks=[]; }
-for(const t of tasks){ if(typeof t.done!=='boolean') t.done=false; if(!Array.isArray(t.items)) t.items=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; if(!it.type) it.type='item'; if(!it.type) it.type='item'; } }
+for(const t of tasks){ if(typeof t.done!=='boolean') t.done=false; if(!Array.isArray(t.items)) t.items=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; if(!it.type) it.type='item'; if(!it.type) it.type='item'; if(!it.type) it.type='item'; } }
 
 const els={
   appTitle: document.getElementById('appTitle'),
@@ -185,7 +185,7 @@ function editItem(taskId, itemId){
   it.title=v.trim()||it.title; save(); renderChecklist(t);
 }
 function removeItem(taskId, itemId){
-  showConfirm('Удалить подзадачу?', ()=>{
+  showConfirm('Удалить папку?', ()=>{
     const t=tasks.find(x=>x.id===taskId); if(!t) return;
     t.items=(t.items||[]).filter(s=>s.id!==itemId);
     t.done = (t.items||[]).length>0 ? (t.items||[]).every(x=>x.done) : t.done;
@@ -571,3 +571,25 @@ els.deleteFolderBtn.onclick = ()=>{
   if(!confirm('Удалить папку «'+f.title+'»?')) return;
   t.items=t.items.filter(x=>x.id!==f.id); save(); setView('task'); renderChecklist(t);
 };
+
+// ensure folders are rendered via folderRow, not itemRow
+(function(){
+  if(typeof window.itemRow==='function'){
+    const _itemRow = window.itemRow;
+    window.itemRow = function(t,it){
+      try{
+        if(it && it.type==='folder') return folderRow(t,it);
+      }catch(e){}
+      return _itemRow.call(this,t,it);
+    };
+  }
+})();
+// block accidental navigation to note from folder rows
+try{
+  if(els && els.checkList){
+    els.checkList.addEventListener('click', function(e){
+      const li = e.target && e.target.closest && e.target.closest('li.folder-row');
+      if(li){ e.stopPropagation(); }
+    }, true);
+  }
+}catch(_){}
