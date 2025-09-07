@@ -594,9 +594,32 @@ try{
   }
 }catch(_){}
 
-// HOTFIX boot
+// ROUTER_STABLE
+function handleHash(){
+  const raw=(location.hash||'').slice(1);
+  const p=raw.split('/').filter(Boolean);
+  if(p.length===0){ setView('list'); return; }
+  switch(p[0]){
+    case 'list': setView('list'); break;
+    case 'task': openTask(p[1]); break;
+    case 'note': openNote(p[1],p[2]); break;
+    case 'folder': openFolder(p[1],p[2]); break;
+    default: setView('list');
+  }
+}
+window.addEventListener('hashchange', handleHash);
+setTimeout(handleHash, 0);
+
+// BACK_TO_TASK_HASH
 try{
-  current = current || {};
-  current.folder = null;
-  if(typeof setView==='function') setView('task');
+  if(els.backFromFolder){
+    const oldHandler = els.backFromFolder.onclick;
+    els.backFromFolder.onclick = function(){
+      try{
+        if(current && current.task){ location.hash = '#/task/'+current.task.id; }
+        else { location.hash = '#/list'; }
+      }catch(e){}
+      if(typeof oldHandler==='function'){ oldHandler(); }
+    };
+  }
 }catch(e){}
