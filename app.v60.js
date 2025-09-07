@@ -586,7 +586,15 @@ try{
 function handleHash(){
   const raw=(location.hash||'').slice(1);
   const p=raw.split('/').filter(Boolean);
-  if(p.length===0){ setView && setView('list'); return; }
+  if(p.length===0){ setView('list'); return; }
+  switch(p[0]){
+    case 'list': setView('list'); break;
+    case 'task': openTask(p[1]); break;
+    case 'note': openNote(p[1],p[2]); break;
+    case 'folder': openFolder(p[1],p[2]); break;
+    default: setView('list');
+  }
+}
   switch(p[0]){
     case 'list':   setView && setView('list'); break;
     case 'task':   openTask && openTask(p[1]); break;
@@ -597,3 +605,10 @@ function handleHash(){
 }
 window.addEventListener('hashchange', handleHash);
 document.addEventListener('DOMContentLoaded', handleHash);
+
+// BOOT_LIST_DEFAULT
+window.addEventListener('hashchange', handleHash);
+document.addEventListener('DOMContentLoaded', function(){
+  try{ if(!location.hash) location.hash = '#/list'; }catch(e){}
+  handleHash();
+});
