@@ -219,5 +219,18 @@
     <div id="foEmpty" class="muted" style="padding:8px 12px">В папке пока пусто.</div>
   </div>
 </div>
+
+<script>
+// Tiny error toast so white-screen issues are visible
+window.addEventListener('error', function(e){
+  try{
+    var msg = (e.error && e.error.message) ? e.error.message : (e.message || 'Unknown error');
+    var box=document.createElement('div');
+    box.style='position:fixed;left:8px;bottom:8px;padding:8px 10px;background:#222;color:#eee;border-radius:8px;z-index:99999;max-width:90vw;font:12px/1.4 -apple-system,system-ui';
+    box.textContent='JS Error: '+msg;
+    document.body.appendChild(box);
+  }catch(_) {}
+});
+</script>
 </body>
 </html>

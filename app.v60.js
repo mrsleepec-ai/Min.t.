@@ -506,12 +506,22 @@ function createFolder(taskId){
   renderChecklist(t);
 }
 function folderRow(t,it){
-  const li=document.createElement('li'); li.className='row folder-row'; li.dataset.id=it.id; li.dataset.taskId=t.id;
+  const li=document.createElement('li'); li.className='row folder-row';
+  try{ li.dataset.id=it.id; li.dataset.taskId=t.id; }catch(_){}
   const spacer=document.createElement('div');
-  const title=document.createElement('div'); title.className='title'; title.textContent='📁 '+it.title;
+  const title=document.createElement('div'); title.className='title'; title.textContent='📁 '+(it.title||'Папка');
   const actions=document.createElement('div'); actions.className='actions';
   const del=ghost('🗑️', ()=>{
-    if((t.items||[]).some(x=>x.folderId===it.id)){ alert('Сначала уберите подзадачи из папки'); return; }
+    try{
+      if((t.items||[]).some(x=>x.folderId===it.id)){ alert('Сначала уберите подзадачи из папки'); return; }
+      if(!confirm('Удалить папку «'+(it.title||'Папка')+'»?')) return;
+      t.items=t.items.filter(x=>x.id!==it.id); save && save(); if(typeof renderChecklist==='function') renderChecklist(t);
+    }catch(e){ console.error(e); }
+  });
+  actions.append(del);
+  li.append(spacer,title,actions);
+  return li;
+}
     if(!confirm('Удалить папку «'+it.title+'»?')) return;
     t.items=t.items.filter(x=>x.id!==it.id); save(); renderChecklist(t);
   });
@@ -612,6 +622,20 @@ try{
       var tid = el.dataset.taskId, fid = el.dataset.id;
       if(tid && fid){ ev.preventDefault(); foOpen(tid,fid); }
     }catch(e){}
+  }
+  document.addEventListener('click', handler, true);
+  document.addEventListener('touchstart', handler, true);
+})();
+// GLOBAL_FOLDER_DELEGATE_SAFE
+(function(){
+  function handler(ev){
+    try{
+      var el = ev.target && ev.target.closest && ev.target.closest('li.folder-row');
+      if(!el) return;
+      var tid = el.dataset && el.dataset.taskId;
+      var fid = el.dataset && el.dataset.id;
+      if(tid && fid){ ev.preventDefault(); foOpen(tid,fid); }
+    }catch(e){ console.error(e); }
   }
   document.addEventListener('click', handler, true);
   document.addEventListener('touchstart', handler, true);
