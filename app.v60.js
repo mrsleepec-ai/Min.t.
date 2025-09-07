@@ -4,53 +4,15 @@ let tasks=[];
 try{ tasks=JSON.parse(localStorage.getItem(storeKey)||'[]'); }catch{ tasks=[]; }
 for(const t of tasks){ if(typeof t.done!=='boolean') t.done=false; if(!Array.isArray(t.items)) t.items=[]; for(const it of t.items){ if(typeof it.note!=='string') it.note=''; if(!Array.isArray(it.notePhotoKeys)) it.notePhotoKeys=[]; if(typeof it.done!=='boolean') it.done=false; if(!it.type) it.type='item'; } }
 
-const els={
-  appTitle: document.getElementById('appTitle'),
-  viewList: document.getElementById('view-list'),
-  viewDetail: document.getElementById('view-detail'),
-  viewNote: document.getElementById('view-note'),
-  // list
-  addTask: document.getElementById('addTask'),
-  taskTitle: document.getElementById('taskTitle'),
-  tasks: document.getElementById('tasks'),
-  tasksEmpty: document.getElementById('tasksEmpty'),
-  tabActive: document.getElementById('tabActive'),
-  tabDone: document.getElementById('tabDone'),
-  tabAll: document.getElementById('tabAll'),
-  // detail
-  taskHeader: document.getElementById('taskHeader'),
-  pdfBtn: document.getElementById('pdfBtn'),
-  renameTaskBtn: document.getElementById('renameTaskBtn'),
-  deleteTaskBtn: document.getElementById('deleteTaskBtn'),
-  addSub: document.getElementById('addSub'),
-  subTitle: document.getElementById('subTitle'),
-  checkList: document.getElementById('checkList'),
-  emptyCheck: document.getElementById('emptyCheck'),
-  // note
-  crumbTask: document.getElementById('crumbTask'),
-  noteSubtaskText: document.getElementById('noteSubtaskText'),
-  noteText: document.getElementById('noteText'),
-  saveNoteBtn: document.getElementById('saveNoteBtn'),
-  noteAttachBtn: document.getElementById('noteAttachBtn'),
-  noteAttachInput: document.getElementById('noteAttachInput'),
-  notePhotos: document.getElementById('notePhotos'),
-  // confirm
-  confirmModal: document.getElementById('confirmModal'),
-  confirmText: document.getElementById('confirmText'),
-  confirmCancel: document.getElementById('confirmCancel'),
-  confirmOk: document.getElementById('confirmOk'),
-  // pdf choice
-  pdfChoiceModal: document.getElementById('pdfChoiceModal'),
-  optChecklist: document.getElementById('optChecklist'),
-  optDescription: document.getElementById('optDescription'),
-  pdfChoiceCancel: document.getElementById('pdfChoiceCancel'),
-  // checklist params
-  checklistParamsModal: document.getElementById('checklistParamsModal'),
-  paramDays: document.getElementById('paramDays'),
-  paramExtra: document.getElementById('paramExtra'),
-  paramLandscape: document.getElementById('paramLandscape'),
-  paramsCancel: document.getElementById('paramsCancel'),
-  paramsCreate: document.getElementById('paramsCreate'),
+\1,
+  folder:document.getElementById('view-folder'),
+  backFromFolder:document.getElementById('backFromFolder'),
+  deleteFolderBtn:document.getElementById('deleteFolderBtn'),
+  folderTitle:document.getElementById('folderTitle'),
+  folderItemInput:document.getElementById('folderItemInput'),
+  folderItemAdd:document.getElementById('folderItemAdd'),
+  folderList:document.getElementById('folderList'),
+  folderEmpty:document.getElementById('folderEmpty')
 };
 
 function save(){ localStorage.setItem(storeKey, JSON.stringify(tasks)); }
@@ -529,44 +491,54 @@ function assignFolder(taskId,itemId){
   renderChecklist(t);
 }
 
-// --- Folder overlay (no router) ---
-const fo = {
-  root:document.getElementById('folderOverlay'),
-  back:document.getElementById('foBack'),
-  title:document.getElementById('foTitle'),
-  del:document.getElementById('foDelete'),
-  input:document.getElementById('foInput'),
-  add:document.getElementById('foAdd'),
-  list:document.getElementById('foList'),
-  empty:document.getElementById('foEmpty')
-};
-function foOpen(taskId, folderId){
-  const t = tasks.find(x=>x.id===taskId); if(!t) return;
-  const f = (t.items||[]).find(x=>x.id===folderId && x.type==='folder'); if(!f) return;
+/* Folder guard for itemRow */
+(function(){
+  if(typeof window.itemRow==='function'){
+    const _orig = window.itemRow;
+    window.itemRow = function(t,it){
+      if(it && it.type==='folder') return folderRow(t,it);
+      return _orig.call(this,t,it);
+    };
+  }
+})();
+// Folder screen logic
+function openFolder(taskId, folderId){
+  const t = tasks.find(x=>x.id===taskId); if(!t){ setView('task'); return; }
+  const f = (t.items||[]).find(x=>x.id===folderId && x.type==='folder'); if(!f){ openTask(taskId); return; }
   window.current = window.current || {}; current.task=t; current.folder=f;
-  fo.title.textContent = f.title;
-  foRender();
-  fo.root.classList.remove('hidden');
-  try{ fo.input.focus(); }catch(e){}
+  els.folderTitle.textContent = f.title;
+  renderFolderList(t,f);
+  setView('folder');
 }
-function foClose(){ fo.root.classList.add('hidden'); }
-function foRender(){
-  const t=current.task, f=current.folder;
-  fo.list.innerHTML='';
+function renderFolderList(t,f){
+  const list=els.folderList; list.innerHTML='';
   const arr=(t.items||[]).filter(x=>x.type!=='folder' && x.folderId===f.id);
-  fo.empty.style.display = arr.length? 'none':'block';
-  arr.forEach(it=> fo.list.appendChild(itemRow(t,it)));
+  els.folderEmpty.style.display = arr.length? 'none':'block';
+  arr.forEach(it=> list.appendChild(itemRow(t,it)));
 }
-fo.back.onclick = foClose;
-fo.add.onclick = ()=>{
+// folder UI events
+els.backFromFolder.onclick = ()=>{ location.hash = '#/task/'+(current && current.task ? current.task.id : ''); };
+els.folderItemAdd.onclick = ()=>{
   const t=current.task, f=current.folder; if(!t||!f) return;
-  const v=(fo.input.value||'').trim(); if(!v) return;
+  const v=(els.folderItemInput.value||'').trim(); if(!v) return;
   (t.items=t.items||[]).push({id:uid(), title:v, done:false, note:'', photos:[], folderId:f.id, type:'item'});
-  fo.input.value=''; save(); foRender(); renderChecklist(t);
+  els.folderItemInput.value=''; save(); renderFolderList(t,f); renderChecklist(t);
 };
-fo.del.onclick = ()=>{
+els.deleteFolderBtn.onclick = ()=>{
   const t=current.task, f=current.folder; if(!t||!f) return;
   if((t.items||[]).some(x=>x.folderId===f.id)){ alert('Сначала уберите подзадачи из папки'); return; }
   if(!confirm('Удалить папку «'+f.title+'»?')) return;
-  t.items=t.items.filter(x=>x.id!==it.id); save(); foClose(); renderChecklist(t);
+  t.items=t.items.filter(x=>x.id!==f.id); save(); setView('task'); renderChecklist(t);
 };
+
+function handleHash(){
+  const raw=(location.hash||'').slice(1);
+  const parts=raw.split('/').filter(Boolean);
+  if(parts.length===0){ setView('list'); return; }
+  if(parts[0]==='task')   openTask(parts[1]);
+  else if(parts[0]==='note')   openNote(parts[1], parts[2]);
+  else if(parts[0]==='folder') openFolder(parts[1], parts[2]);
+  else setView('list');
+}
+window.addEventListener('hashchange', handleHash);
+document.addEventListener('DOMContentLoaded', handleHash);

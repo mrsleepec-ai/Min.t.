@@ -65,20 +65,7 @@
     #pdfViewer header button{background:#0ea5e9;color:#fff;border:none;border-radius:10px;padding:8px 10px;font-weight:600}
     #pdfViewer header .ghost{background:transparent;border:1px solid var(--line);color:#e6eefc}
     #pdfViewer iframe{flex:1;border:0;width:100%;background:#fff}
-        
-/* Folder overlay */
-#folderOverlay.hidden{display:none}
-#folderOverlay{
-  position:fixed; inset:0; background:#f7f8fb; z-index:9999;
-  display:flex; flex-direction:column;
-}
-#folderOverlay .bar{
-  background:#11a7df; color:#fff; padding:12px 16px; font-weight:600;
-  display:flex; align-items:center; gap:12px;
-}
-#folderOverlay .bar button{background:rgba(255,255,255,.2); color:#fff; border:none; border-radius:12px; padding:8px 12px}
-#folderOverlay .content{ padding:16px; }
-.folder-row{cursor:pointer}
+        .hidden{display:none}
 </style>
 </head>
 <body>
@@ -145,7 +132,22 @@
       </header>
       <iframe id="pdfFrame" title="Просмотр PDF/печати"></iframe>
     </div>
-    </main>
+    
+  <!-- FOLDER SCREEN -->
+  <section id="view-folder" class="card hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <button type="button" class="ghost" id="backFromFolder">← Подзадачи</button>
+      <button type="button" class="ghost" id="deleteFolderBtn">🗑️ Удалить папку</button>
+    </div>
+    <h3 id="folderTitle" style="margin:0 0 8px"></h3>
+    <div class="inputrow">
+      <input id="folderItemInput" type="text" maxlength="160" placeholder="Добавить подзадачу в эту папку…">
+      <button type="button" id="folderItemAdd">Добавить</button>
+    </div>
+    <ul id="folderList" class="list"></ul>
+    <div id="folderEmpty" class="muted">В папке пока пусто.</div>
+  </section>
+</main>
 
   <!-- Confirm modal -->
   <div id="confirmModal" class="modal">
@@ -200,24 +202,5 @@
 
   <div id="orientationLock"><div class="box"><h2>Поверните устройство</h2><p>Приложение работает только в портретной ориентации.</p></div></div>
 <script src="app.v60.js"></script>
-
-<div id="folderOverlay" class="hidden">
-  <div class="bar">
-    <button type="button" id="foBack">← Подзадачи</button>
-    <div id="foTitle" style="font-size:18px">Папка</div>
-    <div style="flex:1"></div>
-    <button type="button" id="foDelete">🗑️ Удалить папку</button>
-  </div>
-  <div class="content">
-    <div class="card" style="margin:0 0 12px">
-      <div class="inputrow">
-        <input id="foInput" type="text" maxlength="160" placeholder="Добавить подзадачу в эту папку…">
-        <button type="button" id="foAdd">Добавить</button>
-      </div>
-    </div>
-    <ul id="foList" class="list"></ul>
-    <div id="foEmpty" class="muted" style="padding:8px 12px">В папке пока пусто.</div>
-  </div>
-</div>
 </body>
 </html>
