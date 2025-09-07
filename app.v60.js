@@ -506,11 +506,20 @@ function createFolder(taskId){
   renderChecklist(t);
 }
 function folderRow(t,it){
-  const li=document.createElement('li'); li.className='row folder-row'; li.dataset.id=it.id;
+  const li=document.createElement('li'); li.className='row folder-row'; li.dataset.id=it.id; li.dataset.taskId=t.id;
   const spacer=document.createElement('div');
   const title=document.createElement('div'); title.className='title'; title.textContent='📁 '+it.title;
   const actions=document.createElement('div'); actions.className='actions';
-  const del=ghost('🗑️', ()=>{ if((t.items||[]).some(x=>x.folderId===it.id)){ alert('Сначала уберите элементы из папки'); return; } if(!confirm('Удалить папку «'+it.title+'»?')) return; t.items=t.items.filter(x=>x.id!==it.id); save(); renderChecklist(t); });
+  const del=ghost('🗑️', ()=>{
+    if((t.items||[]).some(x=>x.folderId===it.id)){ alert('Сначала уберите подзадачи из папки'); return; }
+    if(!confirm('Удалить папку «'+it.title+'»?')) return;
+    t.items=t.items.filter(x=>x.id!==it.id); save(); renderChecklist(t);
+  });
+  actions.append(del);
+  // click handled by delegated listener
+  li.append(spacer,title,actions);
+  return li;
+} if(!confirm('Удалить папку «'+it.title+'»?')) return; t.items=t.items.filter(x=>x.id!==it.id); save(); renderChecklist(t); });
   actions.append(del);
   li.onclick=()=>foOpen(t.id,it.id); li.append(spacer,title,actions);
   return li;
@@ -578,4 +587,18 @@ try{
     if(!confirm('Удалить папку «'+f.title+'»?')) return;
     t.items=t.items.filter(x=>x.id!==f.id); save(); foClose(); renderChecklist && renderChecklist(t);
   };
+}catch(e){}
+
+// DELEGATE_FOLDER_CLICK
+try{
+  if(els.checkList){
+    els.checkList.addEventListener('click', function(e){
+      const li = e.target.closest && e.target.closest('li.folder-row');
+      if(li){
+        const taskId = li.dataset.taskId;
+        const folderId = li.dataset.id;
+        if(taskId && folderId) foOpen(taskId, folderId);
+      }
+    });
+  }
 }catch(e){}
