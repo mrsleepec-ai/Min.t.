@@ -528,3 +528,43 @@ function folderRow(t,it){
   li.append(spacer,title,actions);
   return li;
 }
+
+// --- Ensure "📁 Папка" button exists and works ---
+function ensureFolderButton(taskId){
+  try{
+    if(!els || !els.renameTaskBtn) return;
+    // if button already present, just (re)wire it
+    let btn = document.getElementById('addFolderBtn');
+    if(!btn){
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.id = 'addFolderBtn';
+      btn.className = 'ghost';
+      btn.textContent = '📁 Папка';
+      if(els.renameTaskBtn.parentElement){
+        els.renameTaskBtn.parentElement.insertBefore(btn, els.renameTaskBtn.nextSibling);
+      }
+    }
+    btn.onclick = function(){
+      const tId = taskId || (window.current && current.task && current.task.id);
+      if(!tId) return;
+      if(typeof createFolder === 'function') createFolder(tId);
+    };
+  }catch(e){}
+}
+
+// Patch openTask to inject the button every time
+(function(){
+  if(typeof window.openTask === 'function'){
+    const _openTask = window.openTask;
+    window.openTask = function(taskId){
+      const r = _openTask.apply(this, arguments);
+      try{ ensureFolderButton(taskId); }catch(e){}
+      return r;
+    };
+  } else {
+    document.addEventListener('DOMContentLoaded', function(){
+      try{ ensureFolderButton(); }catch(e){}
+    });
+  }
+})();
