@@ -189,7 +189,6 @@ function removeItem(taskId, itemId){
     t.done = (t.items || []).length>0 ? (t.items || []).every(x=>x.done) : false;
     save(); setTabLabels(); renderChecklist(t);
   });
-});
 }
 
 // Note & photos
