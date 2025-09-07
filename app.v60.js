@@ -555,3 +555,8 @@ document.addEventListener('click', function(e){
   if(!tId){ alert('Не удалось определить задачу. Откройте задачу и попробуйте ещё раз.'); return; }
   if(typeof createFolder==='function') createFolder(tId);
 }, true);
+
+function confirmDeleteText(it){
+  const isFolder = it && it.type === 'folder';
+  return confirm(isFolder ? 'Удалить папку?' : 'Удалить подзадачу?');
+}
