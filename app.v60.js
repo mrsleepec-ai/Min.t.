@@ -565,8 +565,9 @@ document.addEventListener('click', function(e){
 
 
 
-// === Folders: dynamic modals & helpers (no HTML edits) ===
-function ensureFolderModals(){
+
+// === Folders: dynamic modals (no HTML edits) ===
+function __ensureFolderModals(){
   if(!document.getElementById('folderPickerModal')){
     const m=document.createElement('div');
     m.id='folderPickerModal';
@@ -596,8 +597,8 @@ function ensureFolderModals(){
     v.querySelector('#folderViewClose').onclick=()=>{v.style.display='none';};
   }
 }
-function showFolderPicker(taskId,itemId){
-  ensureFolderModals();
+function __showFolderPicker(taskId,itemId){
+  __ensureFolderModals();
   const t=tasks.find(x=>x.id===taskId); if(!t) return;
   const it=(t.items||[]).find(i=>i.id===itemId); if(!it) return;
   const folders=(t.items||[]).filter(x=>x.type==='folder');
@@ -621,8 +622,8 @@ function showFolderPicker(taskId,itemId){
   }
   modal.style.display='flex';
 }
-function openFolderView(taskId,folderId){
-  ensureFolderModals();
+function __openFolderView(taskId,folderId){
+  __ensureFolderModals();
   const t=tasks.find(x=>x.id===taskId); if(!t) return;
   const f=(t.items||[]).find(i=>i.id===folderId && i.type==='folder'); if(!f) return;
   const v=document.getElementById('folderViewModal');
@@ -645,41 +646,3 @@ function openFolderView(taskId,folderId){
   }
   v.style.display='flex';
 }
-
-// After opening a task, augment list rows with folder move button and folder open on click.
-(function(){
-  if(typeof window.openTask==='function'){
-    const _open=window.openTask;
-    window.openTask=function(taskId){
-      const r=_open.apply(this, arguments);
-      try{
-        const t = tasks.find(x=>x.id===taskId) || (window.current && current.task);
-        const list = document.querySelector('#view-detail .list') || document.querySelector('#view-detail ul');
-        if(!t || !list) return r;
-        list.querySelectorAll('li.row[data-id]').forEach(li=>{
-          const id=li.dataset.id;
-          const it=(t.items||[]).find(i=>i.id===id);
-          if(!it) return;
-          const actions = li.querySelector('.actions') || li.lastElementChild;
-          if(it.type==='folder'){
-            if(!li.dataset.folderWired){
-              li.dataset.folderWired='1';
-              li.addEventListener('click', (e)=>{
-                if(e.target && (e.target.tagName==='BUTTON' || e.target.closest('button'))) return;
-                openFolderView(t.id, it.id);
-              });
-            }
-          } else {
-            if(actions && !actions.querySelector('.moveToFolderBtn')){
-              const btn=document.createElement('button');
-              btn.type='button'; btn.className='ghost moveToFolderBtn'; btn.textContent='📂';
-              btn.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); showFolderPicker(t.id, it.id); };
-              actions.appendChild(btn);
-            }
-          }
-        });
-      }catch(e){ /* silent */ }
-      return r;
-    };
-  }
-})();
