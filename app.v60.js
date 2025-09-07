@@ -602,3 +602,17 @@ try{
     });
   }
 }catch(e){}
+
+// GLOBAL_FOLDER_DELEGATE
+(function(){
+  function handler(ev){
+    try{
+      var el = ev.target && ev.target.closest && ev.target.closest('li.folder-row');
+      if(!el) return;
+      var tid = el.dataset.taskId, fid = el.dataset.id;
+      if(tid && fid){ ev.preventDefault(); foOpen(tid,fid); }
+    }catch(e){}
+  }
+  document.addEventListener('click', handler, true);
+  document.addEventListener('touchstart', handler, true);
+})();
