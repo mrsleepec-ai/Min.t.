@@ -202,5 +202,16 @@
 
   <div id="orientationLock"><div class="box"><h2>Поверните устройство</h2><p>Приложение работает только в портретной ориентации.</p></div></div>
 <script src="app.v60.js"></script>
+
+<script>
+// Error toast to catch crashes on device
+window.addEventListener('error', function(e){
+  var msg = (e.error && e.error.message) ? e.error.message : (e.message || 'Unknown error');
+  var box=document.createElement('div');
+  box.style='position:fixed;left:8px;bottom:8px;padding:8px 10px;background:#222;color:#eee;border-radius:8px;z-index:99999;max-width:90vw;font:12px/1.4 -apple-system,system-ui';
+  box.textContent='JS Error: '+msg;
+  document.body.appendChild(box);
+});
+</script>
 </body>
 </html>

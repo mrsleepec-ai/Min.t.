@@ -468,11 +468,20 @@ function createFolder(taskId){
   renderChecklist(t);
 }
 function folderRow(t,it){
-  const li=document.createElement('li'); li.className='row folder-row'; li.dataset.id=it.id;
+  const li=document.createElement('li'); li.className='row folder-row'; li.dataset.id=it.id; li.dataset.taskId=t.id;
   const spacer=document.createElement('div');
   const title=document.createElement('div'); title.className='title'; title.textContent='📁 '+it.title;
   const actions=document.createElement('div'); actions.className='actions';
-  const del=ghost('🗑️', ()=>{ if((t.items||[]).some(x=>x.folderId===it.id)){ alert('Сначала уберите элементы из папки'); return; } if(!confirm('Удалить папку «'+it.title+'»?')) return; t.items=t.items.filter(x=>x.id!==it.id); save(); renderChecklist(t); });
+  const del=ghost('🗑️', ()=>{
+    if((t.items||[]).some(x=>x.folderId===it.id)){ alert('Сначала уберите подзадачи из папки'); return; }
+    if(!confirm('Удалить папку «'+it.title+'»?')) return;
+    t.items=t.items.filter(x=>x.id!==it.id); save && save(); if(typeof renderChecklist==='function') renderChecklist(t);
+  });
+  actions.append(del);
+  const link=document.createElement('a'); link.className='row-link'; link.href='#/folder/'+t.id+'/'+it.id;
+  li.append(spacer,title,actions,link);
+  return li;
+} if(!confirm('Удалить папку «'+it.title+'»?')) return; t.items=t.items.filter(x=>x.id!==it.id); save(); renderChecklist(t); });
   actions.append(del);
   li.append(spacer,title,actions);
   return li;
@@ -503,7 +512,15 @@ function assignFolder(taskId,itemId){
 })();
 // Folder screen logic
 function openFolder(taskId, folderId){
-  const t = tasks.find(x=>x.id===taskId); if(!t){ setView('task'); return; }
+  try{
+    var t = tasks && tasks.find ? tasks.find(function(x){return x.id===taskId;}) : null; if(!t){ setView('task'); return; }
+    var f = (t.items||[]).find(function(x){return x.id===folderId && x.type==='folder';}); if(!f){ if(typeof openTask==='function') openTask(taskId); else setView('task'); return; }
+    window.current = window.current || {}; current.task=t; current.folder=f;
+    if(els.folderTitle) els.folderTitle.textContent = f.title;
+    renderFolderList(t,f);
+    setView('folder');
+  }catch(e){ console.error(e); }
+}
   const f = (t.items||[]).find(x=>x.id===folderId && x.type==='folder'); if(!f){ openTask(taskId); return; }
   window.current = window.current || {}; current.task=t; current.folder=f;
   els.folderTitle.textContent = f.title;
@@ -511,10 +528,12 @@ function openFolder(taskId, folderId){
   setView('folder');
 }
 function renderFolderList(t,f){
-  const list=els.folderList; list.innerHTML='';
-  const arr=(t.items||[]).filter(x=>x.type!=='folder' && x.folderId===f.id);
-  els.folderEmpty.style.display = arr.length? 'none':'block';
-  arr.forEach(it=> list.appendChild(itemRow(t,it)));
+  try{
+    var list=els.folderList; if(!list) return; list.innerHTML='';
+    var arr=(t.items||[]).filter(function(x){return x.type!=='folder' && x.folderId===f.id;});
+    if(els.folderEmpty) els.folderEmpty.style.display = arr.length? 'none':'block';
+    arr.forEach(function(it){ if(typeof itemRow==='function') list.appendChild(itemRow(t,it)); });
+  }catch(e){ console.error(e); }
 }
 // folder UI events
 els.backFromFolder.onclick = ()=>{ location.hash = '#/task/'+(current && current.task ? current.task.id : ''); };
@@ -532,9 +551,17 @@ els.deleteFolderBtn.onclick = ()=>{
 };
 
 function handleHash(){
-  const raw=(location.hash||'').slice(1);
-  const parts=raw.split('/').filter(Boolean);
-  if(parts.length===0){ setView('list'); return; }
+  var raw=(location.hash||'').slice(1);
+  var p=raw.split('/').filter(Boolean);
+  if(p.length===0){ setView('list'); return; }
+  switch(p[0]){
+    case 'list':   setView('list'); break;
+    case 'task':   openTask && openTask(p[1]); break;
+    case 'note':   openNote && openNote(p[1],p[2]); break;
+    case 'folder': openFolder && openFolder(p[1],p[2]); break;
+    default:       setView('list');
+  }
+}
   if(parts[0]==='task')   openTask(parts[1]);
   else if(parts[0]==='note')   openNote(parts[1], parts[2]);
   else if(parts[0]==='folder') openFolder(parts[1], parts[2]);
@@ -542,3 +569,14 @@ function handleHash(){
 }
 window.addEventListener('hashchange', handleHash);
 document.addEventListener('DOMContentLoaded', handleHash);
+
+// FOLDER_GUARD_ITEMROW
+(function(){
+  if(typeof window.itemRow==='function'){
+    const _orig = window.itemRow;
+    window.itemRow = function(t,it){
+      if(it && it.type==='folder') return folderRow(t,it);
+      return _orig.call(this,t,it);
+    };
+  }
+})();
