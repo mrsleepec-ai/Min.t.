@@ -565,108 +565,121 @@ document.addEventListener('click', function(e){
 
 
 
-
-// === Folder move & view (no HTML edits) ===
+// === Folders: dynamic modals & helpers (no HTML edits) ===
 function ensureFolderModals(){
-  if (!document.getElementById('folderPickerModal')) {
-    const picker = document.createElement('div');
-    picker.id = 'folderPickerModal';
-    picker.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.2);display:none;align-items:flex-end;justify-content:center;padding:16px;z-index:9999';
-    picker.innerHTML = `
-      <div style="background:#fff;border-radius:16px;padding:12px;min-width:min(520px,95vw);max-height:85vh;overflow:auto;box-shadow:0 10px 30px rgba(0,0,0,.2)">
-        <h3 style="margin:0 0 8px">Добавить в папку</h3>
-        <div id="folderPickerList"></div>
-        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
-          <button type="button" id="folderPickerClose" class="ghost">Отмена</button>
-        </div>
-      </div>`;
-    document.body.appendChild(picker);
-    picker.querySelector('#folderPickerClose').onclick = () => hideFolderPicker();
+  if(!document.getElementById('folderPickerModal')){
+    const m=document.createElement('div');
+    m.id='folderPickerModal';
+    m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.2);display:none;align-items:flex-end;justify-content:center;padding:16px;z-index:9999';
+    m.innerHTML=`<div style="background:#fff;border-radius:16px;padding:12px;min-width:min(520px,95vw);max-height:85vh;overflow:auto;box-shadow:0 10px 30px rgba(0,0,0,.2)">
+      <h3 style="margin:0 0 8px">Добавить в папку</h3>
+      <div id="folderPickerList"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+        <button type="button" id="folderPickerClose" class="ghost">Отмена</button>
+      </div>
+    </div>`;
+    document.body.appendChild(m);
+    m.querySelector('#folderPickerClose').onclick=()=>{m.style.display='none';};
   }
-  if (!document.getElementById('folderViewModal')) {
-    const view = document.createElement('div');
-    view.id = 'folderViewModal';
-    view.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.2);display:none;align-items:flex-end;justify-content:center;padding:16px;z-index:9999';
-    view.innerHTML = `
-      <div style="background:#fff;border-radius:16px;padding:12px;min-width:min(520px,95vw);max-height:85vh;overflow:auto;box-shadow:0 10px 30px rgba(0,0,0,.2)">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <h3 id="folderViewTitle" style="margin:0">Папка</h3>
-          <button type="button" id="folderViewClose" class="ghost">Закрыть</button>
-        </div>
-        <ul id="folderViewList" class="list" style="margin-top:12px;padding:0;list-style:none"></ul>
-      </div>`;
-    document.body.appendChild(view);
-    view.querySelector('#folderViewClose').onclick = () => { view.style.display='none'; };
+  if(!document.getElementById('folderViewModal')){
+    const v=document.createElement('div');
+    v.id='folderViewModal';
+    v.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.2);display:none;align-items:flex-end;justify-content:center;padding:16px;z-index:9999';
+    v.innerHTML=`<div style="background:#fff;border-radius:16px;padding:12px;min-width:min(520px,95vw);max-height:85vh;overflow:auto;box-shadow:0 10px 30px rgba(0,0,0,.2)">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <h3 id="folderViewTitle" style="margin:0">Папка</h3>
+        <button type="button" id="folderViewClose" class="ghost">Закрыть</button>
+      </div>
+      <ul id="folderViewList" class="list" style="margin-top:12px;padding:0;list-style:none"></ul>
+    </div>`;
+    document.body.appendChild(v);
+    v.querySelector('#folderViewClose').onclick=()=>{v.style.display='none';};
   }
 }
-
-function hideFolderPicker(){
-  const m = document.getElementById('folderPickerModal');
-  if (m) m.style.display = 'none';
-}
-
-function showFolderPicker(taskId, itemId){
+function showFolderPicker(taskId,itemId){
   ensureFolderModals();
-  const t = tasks.find(x=>x.id===taskId); if(!t) return;
-  const it = (t.items||[]).find(i=>i.id===itemId); if(!it) return;
-  const folders = (t.items||[]).filter(x=>x.type==='folder');
-
-  const modal = document.getElementById('folderPickerModal');
-  const list  = modal.querySelector('#folderPickerList');
-  list.innerHTML = '';
-
-  if (folders.length === 0) {
-    const p = document.createElement('p'); p.textContent = 'В этой задаче пока нет папок.';
-    list.appendChild(p);
+  const t=tasks.find(x=>x.id===taskId); if(!t) return;
+  const it=(t.items||[]).find(i=>i.id===itemId); if(!it) return;
+  const folders=(t.items||[]).filter(x=>x.type==='folder');
+  const modal=document.getElementById('folderPickerModal');
+  const list =document.getElementById('folderPickerList');
+  list.innerHTML='';
+  if(folders.length===0){
+    const p=document.createElement('p'); p.textContent='В этой задаче пока нет папок.'; list.appendChild(p);
   } else {
     folders.forEach(f=>{
-      const btn=document.createElement('button');
-      btn.type='button'; btn.className='ghost';
-      btn.textContent='📁 '+f.title;
-      btn.onclick=()=>{ it.folderId=f.id; save(); modal.style.display='none'; renderChecklist(t); };
-      list.appendChild(btn);
+      const b=document.createElement('button'); b.type='button'; b.className='ghost'; b.textContent='📁 '+f.title;
+      b.onclick=()=>{ it.folderId=f.id; save(); modal.style.display='none'; renderChecklist(t); };
+      list.appendChild(b);
     });
   }
-
-  if (it.folderId){
-    const div=document.createElement('div'); div.style.margin='8px 0'; list.appendChild(div);
-    const un=document.createElement('button'); un.type='button'; un.className='ghost'; un.textContent='⏏️ Убрать из папки';
-    un.onclick=()=>{ delete it.folderId; save(); modal.style.display='none'; renderChecklist(t); };
-    list.appendChild(un);
+  if(it.folderId){
+    const sep=document.createElement('div'); sep.style.margin='8px 0'; list.appendChild(sep);
+    const u=document.createElement('button'); u.type='button'; u.className='ghost'; u.textContent='⏏️ Убрать из папки';
+    u.onclick=()=>{ delete it.folderId; save(); modal.style.display='none'; renderChecklist(t); };
+    list.appendChild(u);
   }
-
   modal.style.display='flex';
 }
-
-function openFolderView(taskId, folderId){
+function openFolderView(taskId,folderId){
   ensureFolderModals();
-  const t = tasks.find(x=>x.id===taskId); if(!t) return;
-  const f = (t.items||[]).find(i=>i.id===folderId && i.type==='folder'); if(!f) return;
-
-  const modal = document.getElementById('folderViewModal');
-  const title = modal.querySelector('#folderViewTitle');
-  const list  = modal.querySelector('#folderViewList');
-  title.textContent = f.title;
-  list.innerHTML = '';
-
-  const arr = (t.items||[]).filter(x=>x.type!=='folder' && x.folderId===f.id);
-  if (arr.length===0){
+  const t=tasks.find(x=>x.id===taskId); if(!t) return;
+  const f=(t.items||[]).find(i=>i.id===folderId && i.type==='folder'); if(!f) return;
+  const v=document.getElementById('folderViewModal');
+  const ttl=v.querySelector('#folderViewTitle');
+  const lst=v.querySelector('#folderViewList');
+  ttl.textContent=f.title; lst.innerHTML='';
+  const arr=(t.items||[]).filter(x=>x.type!=='folder' && x.folderId===f.id);
+  if(arr.length===0){
     const li=document.createElement('li'); li.className='row';
-    const sp=document.createElement('div');
-    const tt=document.createElement('div'); tt.className='title'; tt.textContent='Пусто';
-    const ac=document.createElement('div'); ac.className='actions';
-    li.append(sp, tt, ac); list.append(li);
+    const sp=document.createElement('div'); const tt=document.createElement('div'); tt.className='title'; tt.textContent='Пусто';
+    const ac=document.createElement('div'); ac.className='actions'; li.append(sp,tt,ac); lst.appendChild(li);
   } else {
     arr.forEach(it=>{
       const li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
-      const sp=document.createElement('div');
-      const tt=document.createElement('div'); tt.className='title'; tt.textContent=it.title;
+      const sp=document.createElement('div'); const tt=document.createElement('div'); tt.className='title'; tt.textContent=it.title;
       const ac=document.createElement('div'); ac.className='actions';
-      const open=ghost('↗️', ()=>{ location.hash = '#/note/'+t.id+'/'+it.id; modal.style.display='none'; });
-      ac.append(open);
-      li.append(sp, tt, ac);
-      list.append(li);
+      const open=ghost('↗️', ()=>{ location.hash='#/note/'+t.id+'/'+it.id; v.style.display='none'; });
+      ac.append(open); li.append(sp,tt,ac); lst.appendChild(li);
     });
   }
-  modal.style.display='flex';
+  v.style.display='flex';
 }
+
+// After opening a task, augment list rows with folder move button and folder open on click.
+(function(){
+  if(typeof window.openTask==='function'){
+    const _open=window.openTask;
+    window.openTask=function(taskId){
+      const r=_open.apply(this, arguments);
+      try{
+        const t = tasks.find(x=>x.id===taskId) || (window.current && current.task);
+        const list = document.querySelector('#view-detail .list') || document.querySelector('#view-detail ul');
+        if(!t || !list) return r;
+        list.querySelectorAll('li.row[data-id]').forEach(li=>{
+          const id=li.dataset.id;
+          const it=(t.items||[]).find(i=>i.id===id);
+          if(!it) return;
+          const actions = li.querySelector('.actions') || li.lastElementChild;
+          if(it.type==='folder'){
+            if(!li.dataset.folderWired){
+              li.dataset.folderWired='1';
+              li.addEventListener('click', (e)=>{
+                if(e.target && (e.target.tagName==='BUTTON' || e.target.closest('button'))) return;
+                openFolderView(t.id, it.id);
+              });
+            }
+          } else {
+            if(actions && !actions.querySelector('.moveToFolderBtn')){
+              const btn=document.createElement('button');
+              btn.type='button'; btn.className='ghost moveToFolderBtn'; btn.textContent='📂';
+              btn.onclick=(e)=>{ e.preventDefault(); e.stopPropagation(); showFolderPicker(t.id, it.id); };
+              actions.appendChild(btn);
+            }
+          }
+        });
+      }catch(e){ /* silent */ }
+      return r;
+    };
+  }
+})();
