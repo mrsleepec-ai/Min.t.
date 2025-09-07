@@ -181,12 +181,15 @@ function editItem(taskId, itemId){
   it.title=v.trim()||it.title; save(); renderChecklist(t);
 }
 function removeItem(taskId, itemId){
+  const t = tasks.find(x=>x.id===taskId); if(!t) return;
+  const it = (t.items || []).find(i=>i.id===itemId); if(!it) return;
+
   showConfirm(confirmDeleteText(it), ()=>{
-    const t=tasks.find(x=>x.id===taskId); if(!t) return;
-    t.items=(t.items||[]).filter(s=>s.id!==itemId);
-    t.done = (t.items||[]).length>0 ? (t.items||[]).every(x=>x.done) : t.done;
+    t.items = (t.items || []).filter(s=>s.id!==itemId);
+    t.done = (t.items || []).length>0 ? (t.items || []).every(x=>x.done) : false;
     save(); setTabLabels(); renderChecklist(t);
   });
+});
 }
 
 // Note & photos
