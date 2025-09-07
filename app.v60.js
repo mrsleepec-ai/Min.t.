@@ -538,3 +538,20 @@ function folderRow(t,it){
   li.append(spacer,title,actions);
   return li;
 }
+
+// --- Global handler to ensure Add Folder works ---
+document.addEventListener('click', function(e){
+  const btn = e.target && (e.target.id==='addFolderBtn' ? e.target : e.target.closest && e.target.closest('#addFolderBtn'));
+  if(!btn) return;
+  e.preventDefault();
+  // derive taskId: current.task.id or from URL '#/task/<id>'
+  let tId = (window.current && current.task && current.task.id) || null;
+  if(!tId){
+    try{
+      const h=(location.hash||''); const m=h.match(/#\/task\/([^/]+)/);
+      if(m) tId=m[1];
+    }catch(_){}
+  }
+  if(!tId){ alert('Не удалось определить задачу. Откройте задачу и попробуйте ещё раз.'); return; }
+  if(typeof createFolder==='function') createFolder(tId);
+}, true);
