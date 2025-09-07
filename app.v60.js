@@ -150,33 +150,13 @@ function showDetail(taskId){
   els.addSub.onsubmit=(e)=>{ e.preventDefault(); const v=els.subTitle.value.trim(); if(!v) return; (t.items ||= []).push({id:uid(), title:v, done:false, note:'', notePhotoKeys:[], folderId:null, type:'item'}); t.done=false; save(); setTabLabels(); els.subTitle.value=''; renderChecklist(t); };
 }
 
-
 function renderChecklist(t){
-  const ul = els.checkList; ul.innerHTML='';
-  const items = (t.items||[]);
-  const folders = items.filter(it=>it.type==='folder');
-  const subs = items.filter(it=>it.type!=='folder');
-  // draw folders
-  for(const f of folders){
-    ul.appendChild(folderRow(t,f));
-    // draw items inside this folder
-    const inside = subs.filter(x=>x.folderId===f.id);
-    for(const it of inside){
-      ul.appendChild(itemRow(t,it));
-    }
-  }
-  // ungrouped items
-  const un = subs.filter(x=>!x.folderId);
-  for(const it of un){
-    ul.appendChild(itemRow(t,it));
-  }
-  els.emptyCheck.hidden = items.length>0 ? true : false;
-  // task done is only based on real items (not folders)
-  t.done = subs.length>0 && subs.every(x=>x.done);
-  save();
-  if(typeof setTabLabels==='function') try{ setTabLabels(); }catch(e){}
-}
-);
+  const items = t.items || [];
+  els.checkList.innerHTML=''; els.emptyCheck.hidden = items.length>0;
+  for(const it of items){
+    const li=document.createElement('li'); li.className='row'; li.dataset.id=it.id;
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!it.done;
+    cb.addEventListener('change', e=>{ e.preventDefault(); e.stopPropagation(); it.done=cb.checked; const allDone=(t.items||[]).length>0 && (t.items||[]).every(x=>x.done); t.done=allDone; save(); setTabLabels(); });
     const title=document.createElement('div'); title.className='title'; title.textContent=it.title;
     const actions=document.createElement('div'); actions.className='actions';
     const attachBtn=ghost('📎', ()=> attachPhoto(t.id, it.id));
@@ -548,3 +528,29 @@ function assignFolder(taskId,itemId){
   save();
   renderChecklist(t);
 }
+
+// --- v61 grouped renderer (fixed) ---
+function drawChecklistGrouped(t){
+  const ul = els.checkList; ul.innerHTML='';
+  const items = (t.items||[]);
+  const folders = items.filter(it=>it.type==='folder');
+  const subs = items.filter(it=>it.type!=='folder');
+  // render folders with their items
+  for(const f of folders){
+    ul.appendChild(folderRow(t,f));
+    for(const it of subs){ if(it.folderId===f.id){ ul.appendChild(itemRow(t,it)); } }
+  }
+  // ungrouped items
+  for(const it of subs){ if(!it.folderId){ ul.appendChild(itemRow(t,it)); } }
+  els.emptyCheck.hidden = items.length>0;
+  t.done = subs.length>0 && subs.every(x=>x.done);
+  try{ save(); if(typeof setTabLabels==='function') setTabLabels(); }catch(e){}
+}
+(function(){
+  var _origRC = window.renderChecklist;
+  if(typeof _origRC==='function'){
+    window.renderChecklist = function(t){
+      try{ drawChecklistGrouped(t); } catch(e){ console.error(e); try{ _origRC(t); }catch(_e){} }
+    };
+  }
+})();
