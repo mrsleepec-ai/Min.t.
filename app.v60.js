@@ -164,7 +164,7 @@ function renderChecklist(t){
     const delBtn=ghost('🗑️', ()=> removeItem(t.id, it.id));
     actions.append(attachBtn, editBtn, delBtn);
     actions.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); });
-    const link=document.createElement('a'); link.className='row-link'; link.href='#/note/'+t.id+'/'+it.id;
+    const link=document.createElement('a'); link.className='row-link'; if(it.type!=='folder'){ link.href='#/note/'+t.id+'/'+it.id; }
     li.append(cb,title,actions,link);
     els.checkList.append(li);
   }
@@ -585,3 +585,9 @@ fo.del && (fo.del.onclick = ()=>{
     };
   }
 })();
+// FOLDER_HASH_LISTENER
+window.addEventListener('hashchange', function(){
+  const raw=(location.hash||'').slice(1);
+  const p=raw.split('/').filter(Boolean);
+  if(p[0]==='folder'){ foOpen(p[1],p[2]); }
+});
